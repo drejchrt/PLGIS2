@@ -1,0 +1,98 @@
+{% load static %}
+{% load custom_tags %}
+<!-- Sidebar -->
+<ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion" id="accordionSidebar">
+
+    <!-- Sidebar - Brand -->
+    <a class="sidebar-brand d-flex align-items-center justify-content-center" href="index.html">
+        <div class="sidebar-brand-icon rotate-n-15">
+            <i class="fas fa-bolt"></i>
+        </div>
+        <div class="sidebar-brand-text mx-3">PLGIS</div>
+    </a>
+
+    <!-- Divider -->
+    <hr class="sidebar-divider my-0">
+
+    <!-- Nav Item - Dashboard -->
+    <li class="nav-item">
+        <a class="nav-link" href="index.html">
+            <i class="fas fa-fw fa-tachometer-alt"></i>
+            <span>Dashboard</span></a>
+    </li>
+
+    <!-- Divider -->
+    <hr class="sidebar-divider">
+
+    <!-- Heading -->
+    {% if request.user|has_group:"admins" %}
+        <div class="sidebar-heading">
+            Componets Management
+        </div>
+
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'circuits' %}">
+                <i class="fa fa-circle-notch"></i>
+                <span>Circuits</span></a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'towers' %}">
+                <i class="fa fa-broadcast-tower"></i>
+                <span>Towers</span></a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'spanfields' %}">
+                <i class="fa fa-broadcast-tower"></i>
+                <span>Span Fields</span></a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'components' %}">
+                <i class="fa fa-toolbox"></i>
+                <span>Components</span></a>
+        </li>
+        <!-- Divider -->
+        <hr class="sidebar-divider">
+
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'constructor' %}">
+                <i class="fa fa-magic"></i>
+                <span>Circuit Constructor</span></a>
+        </li>
+
+        <!-- Divider -->
+        <hr class="sidebar-divider">
+
+    {% endif %}
+    <!-- Nav Item - Pages Collapse Menu -->
+
+
+    <!-- Heading -->
+    <div class="sidebar-heading">
+        Tickets
+    </div>
+
+    <li class="nav-item">
+        <a class="nav-link" href="tables.html">
+            <i class="fa fa-magic"></i>
+            <span>Urgent</span></a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="tables.html">
+            <i class="fa fa-magic"></i>
+            <span>Active</span></a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="tables.html">
+            <i class="fa fa-magic"></i>
+            <span>Issued</span></a>
+    </li>
+
+
+
+    <!-- Sidebar Toggler (Sidebar) -->
+    <div class="text-center d-none d-md-inline">
+        <button class="rounded-circle border-0" id="sidebarToggle"></button>
+    </div>
+
+</ul>
+<!-- End of Sidebar -->

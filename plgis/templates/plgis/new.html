@@ -1,0 +1,82 @@
+{% extends 'plgis/base.html' %}
+{% load custom_tags %}
+{% load crispy_forms_tags %}
+
+{% block title %}
+    PLGIS | New {{ model_name }}
+{% endblock %}
+{% block additional_styles %}
+    <script src="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.10.0/build/ol.js"></script>
+    {{ form.media }}
+{% endblock %}
+{% block content %}
+    <div class="row">
+        <div class="col-3"></div>
+        <div class="col-6">
+            <div class="card">
+                <form id="new_form" method="post" action="{% url model_name|slice:"-1"|concat:"_new" %}"
+                      class="uniForm">
+                    <div class="card-header">
+                        <h1>Create new {{ model_name|slice:"-1" }}</h1>
+                    </div>
+                    <div class="card-body">
+                        {% csrf_token %}
+                        {{ form|crispy }}
+                    </div>
+                    <div class="card-footer text-center">
+                            <button type="reset" class="btn btn-warning">
+                                <i class="fa fa-redo-alt"></i> Clear Form
+                            </button>
+                            <button type="submit" class="btn btn-primary" name="save">
+                                <i class="fa fa-save"></i> Save {{ model_name|slice:"-1" }}
+                            </button>
+                            <button type="submit" class="btn btn-primary" name="saveAndNew">
+                               <i class="fa fa-save"></i><sup><i class="fa fa-plus"></i></sup> Save and new {{ model_name|slice:"-1" }}
+                            </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <div class="col-3"></div>
+    </div>
+
+{% endblock content %}
+
+{% block additional_scripts %}
+    <script>
+        var submitButton = $("button[type=submit]");
+
+
+        function ajax_validate() {
+            // get data from the form elements
+            var form_data = {};
+            $('form#new_form input').each(function () {
+                form_data[$(this).attr('name')] = $(this).val();
+            })
+
+            // make an AJAX call to validate current input
+            $.ajax('{% url model_name|slice:"-1"|concat:"_new" %}', {
+                type: 'POST',  // http method
+                data: form_data, // data to submit
+                success: function (data, status, xhr) {  // callback
+                    ;
+                }
+            });
+        }
+
+        /*
+        $('form input').focus(function () {
+            //console.log('focus');
+            // sent ajax call to validate
+            // maybe unnecessary
+        });
+         */
+
+        $('form input').blur(function () {
+            ajax_validate();
+            //console.log('blur');
+            // sent ajax call to validate
+        });
+    </script>
+
+{% endblock %}

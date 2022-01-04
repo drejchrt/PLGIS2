@@ -1,0 +1,9 @@
+.sidebar-brand-icon {
+    transition-duration: 500ms;
+}
+
+.sidebar-brand-icon:hover {
+    color: #ffdd00;
+    transform: rotate(360deg) scale(1.5);
+
+}
