@@ -167,11 +167,11 @@ class KVP(models.Model):
 # Macro Components
 
 class Circuit(models.Model):
-    identifier = models.CharField(max_length=255)
+    identifier = models.CharField(max_length=255, unique=True)
     voltage = models.IntegerField()
     substation_start = models.CharField(max_length=255, blank=True)
     substation_end = models.CharField(max_length=255, blank=True)
-    date_added = models.DateTimeField(auto_created=True)
+    date_added = models.DateTimeField(auto_now_add=True)
 
     FIELDS = {
         'ID': identifier,
@@ -191,7 +191,7 @@ class Circuit(models.Model):
         return self.__repr__()
 
 class Tower(models.Model):
-    identifier = models.CharField(max_length=255)
+    identifier = models.CharField(max_length=255, unique=True)
     circuit = models.ForeignKey(Circuit, on_delete=models.CASCADE)
     type = models.CharField(max_length=255)  # TODO: Choices
     position = models.PointField()

@@ -15,5 +15,8 @@ def concat(str1, str2):
 
 @register.filter(name='temp_getattr')
 def temp_getattr(model, field):
-    print(model, field)
     return getattr(model, field)
+
+@register.filter(name='temp_zip')
+def temp_zip(iter1, iter2):
+    return zip(iter1, iter2)

@@ -65,7 +65,7 @@ def detail(request, id):
     model = MODELS[model_str]
     context = {
         'model_name': model_str,
-        'headers': model.FIELDS.keys,
+        'headers': model.FIELDS.keys(),
         'object': model.objects.get(pk=id),
         'fields': model.FIELDS.values(),
     }
@@ -74,13 +74,40 @@ def detail(request, id):
 
 
 @login_required
-def edit(request, model):
-    pass
+def edit(request, id):
+    model_str = request.path.split('/')[1]
+    model = MODELS[model_str]
+    form_class = FORMS[model_str]
+    form = form_class(request.POST or None, instance=model.objects.get(pk=id))
+    context = {
+        'model_name': model_str,
+        'form': form,
+        'headers': model.FIELDS.keys(),
+        'object': model.objects.get(pk=id),
+        'fields': model.FIELDS.values(),
+    }
+
+    if request.method == "POST":
+
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Changes successfully saved!')
+            redirect(model_str[:-1], id=id)
+        else:
+            messages.error(request, "Error - Input data invalid")
+            context['form'] = form
+
+    t = loader.get_template("plgis/edit.html")
+    return HttpResponse(t.render(context, request))
 
 
 @login_required
-def delete(request, model):
-    pass
+def delete(request, id):
+    model_str = request.path.split('/')[1]
+    model = MODELS[model_str]
+    model.objects.get(pk=id).delete()
+    messages.success(request, f"{model_str[:-1].capitalize()} successfully deleted")
+    return redirect(model_str)
 
 
 @login_required
@@ -97,26 +124,23 @@ def new(request):
             form = form_class(request.POST)
             if form.is_valid():
                 form.save()
-                print(request.POST)
-                if 'save' in request.POST: # submitted with the save button
+                if 'save' in request.POST:  # submitted with the save button
                     messages.success(request, model_str[:-1] + ' created successfully!')
                     return HttpResponseRedirect(reverse(model_str))
-                else: # submitted with the save and next button
+                else:  # submitted with the save and next button
                     return redirect(model_str[:-1] + '_new')
             else:
-                m = 'Error:\n'
-                m += '\n'.join([f'\t {err}: {det}' for err, det in form.error_messages.items()])
-                messages.error(request,m)
+                messages.error(request, "Error - Input data invalid")
 
                 context = {
                     'model_name': model_str,
                     'headers': model.FIELDS.keys,
-                    'form': form_class()
+                    'form': form
                 }
                 t = loader.get_template("plgis/new.html")
                 return HttpResponse(t.render(context, request))
 
-    else: # load the page with a form
+    else:  # load the page with a form
         context = {
             'model_name': model_str,
             'headers': model.FIELDS.keys,
