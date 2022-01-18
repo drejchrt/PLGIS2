@@ -1,0 +1,643 @@
+{% extends 'plgis/base.html' %}
+{% load crispy_forms_tags %}
+{% load static %}
+
+{% block additional_styles %}
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <style>
+        /*********************************************************************/
+        /* Tree View Styling */
+
+        /* Remove default bullets */
+        ul, #tree {
+            list-style-type: none;
+        }
+
+        li.hoverable:hover {
+            text-shadow: 0 0 #3d3e47;
+        }
+
+        .separate {
+            margin-bottom: 1rem;
+        }
+
+        /* Remove margins and padding from the parent ul */
+        #myUL {
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Style the caret/arrow */
+        .caret {
+            cursor: pointer;
+            user-select: none; /* Prevent text selection */
+        }
+
+        /* Create the caret/arrow with a unicode, and style it */
+        .caret::before {
+            content: "\f0da";
+            font-family: "Font Awesome 5 Free";
+            font-weight: 900;
+            color: black;
+            display: inline-block;
+            margin-right: 6px;
+        }
+
+        /* Rotate the caret/arrow icon when clicked on (using JavaScript) */
+        .caret-down::before {
+            transform: rotate(90deg);
+        }
+
+        /* Hide the nested list */
+        .nested {
+            display: none;
+        }
+
+        /* Show the nested list when the user clicks on the caret/arrow (with JavaScript) */
+        .active {
+            display: block;
+        }
+
+        /*********************************************************************/
+        /* Chips */
+        .chip {
+            display: inline-block;
+            padding: 0 1rem;
+            height: 2rem;
+            font-size: 16px;
+            line-height: 2rem;
+            border-radius: 1rem;
+            background-color: #f1f1f1;
+            margin: .5rem;
+        }
+
+        .chip img {
+            float: left;
+            margin: 0 10px 0 -25px;
+            height: 50px;
+            width: 50px;
+            border-radius: 50%;
+        }
+
+        .closebtn {
+            padding-left: 10px;
+            color: #888;
+            font-weight: bold;
+            float: right;
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        .closebtn:hover {
+            color: #000;
+        }
+
+    </style>
+    <link rel="stylesheet" href="{% static 'plgis/css/widgets/selector.css' %}">
+{% endblock %}
+
+{% block title %}
+    PLGIS | Circuit Constructor
+{% endblock %}
+
+
+{% block modals %}
+    <div id="newComponentModal" class="modal fade">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add new component</h5>
+                    <button class="close" type="button" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">×</span>
+                    </button>
+                </div>
+                <div class="modal-body"> New Component: <input class="form-control" type="text"></div>
+                <div class="modal-footer text-right">
+                    <button class="btn btn-secondary" data-dismiss="modal">
+                        <i class="fa fa-ban"></i> Cancel
+                    </button>
+                    <button class="btn btn-primary" id="addNewComponent">
+                        <i class="fa fa-plus"></i> Add
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+{% endblock %}
+
+
+{% block content %}
+    <div id="alert-circuit-success" class="alert alert-success alert-dismissible fade m-0" role="alert">
+        Circuit successfully added!
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+    <div id="alert-circuit-fail" class="alert alert-danger alert-dismissible fade m-0" role="alert">
+
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+
+    <div class="row">
+        <div class="col-6">
+            <div id="accordion">
+                <div class="card">
+                    <div class="card-header" id="headingOne">
+                        <h5 class="mb-0">
+                            <button class="btn btn-primary btn-circle" data-toggle="collapse"
+                                    data-target="#collapseOne">1
+                            </button>
+                            <button class="btn btn-primary" data-toggle="collapse" data-target="#collapseOne">
+                                <i class="fa fa-circle-notch"></i> Define Circuit
+                            </button>
+                        </h5>
+                    </div>
+
+                    <div id="collapseOne" class="collapse show" aria-labelledby="headingOne" data-parent="#accordion">
+                        <div class="card-body">
+                            <form id="circuit-form" method="#">
+                                {{ circuit_form|crispy }}
+                                <div class="text-center">
+                                    <button type="reset" class="btn btn-warning">
+                                        <i class="fa fa-redo-alt"></i> Reset
+                                    </button>
+                                    <a id="button-add-circuit" class="btn btn-primary" name="save">
+                                        <i class="fa fa-save"></i> Add {{ model_name|slice:"-1" }}
+                                    </a>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header" id="headingTwo">
+                        <h5 class="mb-0">
+                            <button class="btn btn-primary btn-circle disabled" data-toggle="collapse"
+                                    data-target="#collapseTwo">2
+                            </button>
+                            <button class="btn btn-primary disabled" data-toggle="collapse" data-target="#collapseTwo">
+                                <i class="fa fa-broadcast-tower"></i> Add Towers
+                            </button>
+                        </h5>
+                    </div>
+                    <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-parent="#accordion">
+                        <form id="towers-form" method="">
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-12">
+                                        <h5>Tower Names</h5>
+                                    </div>
+                                </div>
+                                <div class="row mb-2" id="name-row">
+                                    <div class="col-3">
+                                        <label for="name_prefix">Prefix:</label>
+                                        <input class="form-control" id="name_prefix" name="name_prefix" type="text"
+                                               placeholder="T_">
+                                    </div>
+                                    <div class="col-3">
+                                        <label for="name_start">Start:</label>
+                                        <input class="form-control" id="name_start" name="name_start" type="number"
+                                               placeholder="1">
+                                    </div>
+                                    <div class="col-3">
+                                        <label for="name_start">End:</label>
+                                        <input class="form-control" id="name_end" name="name_end" type="number"
+                                               placeholder="42">
+                                    </div>
+                                    <div class="col-3">
+                                        <label for="name_start">Padding:</label>
+                                        <input class="form-control" id="name_padding" name="name_padding" type="number"
+                                               placeholder="3">
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-12 text-center">
+                                        <div class="text-muted text-center font-weight-lighter">
+                                            <i class="fa fa-info"></i>
+                                            This will produce towers with name: <span id="name_example"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="dropdown-divider"></div>
+                                <div class="row">
+                                    <div class="col-12">
+                                        <h5>Tower components</h5>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-12">
+                                        <button type="button" id="new_component" class="btn btn-primary mb-1"
+                                                data-toggle="modal"
+                                                data-target="#newComponentModal">
+                                            <i class="fa fa-plus"></i> Add new component
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="row selector" id="selector-tower-comps">
+                                    <div class="col-6 text-center" id="left">
+                                        <span class="selector-subheader bg-dark">Available Components:</span>
+                                        <select id="available" multiple>
+                                            {# TODO: Get all components via AJAX #}
+                                            <option value="Antenna">Antenna</option>
+                                            <option value="Weather Station">Weather Station</option>
+                                            <option value="Ladder">Ladder</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-6 text-center" id="right">
+                                        <span class="selector-subheader bg-success">Selected Components:</span>
+                                        <select id="selected" multiple>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="row text-center font-weight-lighter">
+                                    <div class="col-12">
+                                        <i class="fa fa-info"></i> Double click to select the components
+                                    </div>
+                                </div>
+                                <div class="dropdown-divider"></div>
+                                <div class="row">
+                                    <div class="col-12">
+                                        <h5>Tower Type</h5>
+                                        <select class="form-control" name="tower_type">
+                                            <option value="Tangent Suspension">Tangent Suspension</option>
+                                            <option value="Angle Suspension">Angle Suspension</option>
+                                            <option value="Tangent Strain">Tangent Strain</option>
+                                            <option value="Angle Strain">Angle Strain</option>
+                                            <option value="Tangent dead-end">Tangent dead-end</option>
+                                            <option value="Angle dead-end">Angle dead-end</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="dropdown-divider"></div>
+                                <div class="row">
+                                    <div class="col-12">
+                                        <h5>Points</h5>
+                                    </div>
+                                </div>
+                                <div class="row mb-2">
+                                    <div class="col-6">
+                                        <label for="tower_points_srid">SRID (EPSG):</label>
+                                        {# TODO: Appropriate EPSG Widget #}
+                                        <input id="tower_points_srid" class="form-control" name="tower_points_srid"
+                                               type="number">
+                                    </div>
+                                    <div class="col-6">
+                                        <label for="tower_points_separator">Separator:</label>
+                                        <select class="form-control" id="tower_points_separator"
+                                                name="tower_points_separator">
+                                            <option value=",">Comma (,)</option>
+                                            <option value=";">Semicolon (;)</option>
+                                            <option value="-">Dash (-)</option>
+                                            <option value=" ">Space ( )</option>
+                                            <option value="_">Underscore (_)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="row mb-2">
+                                    <div class="col-12">
+                                        {# TODO: Handle possible code injections??? #}
+                                        <label for="tower_points">Point List</label>
+                                        <textarea class="form-control" name="tower_points"></textarea>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-12 font-weight-lighter">
+                                        <i class="fa fa-info"></i> Provide tower coordinates in specified EPSG separated
+                                        by specified separator. One set of tower coords per line.
+                                    </div>
+                                </div>
+                                <div class="dropdown-divider"></div>
+                                <div class="row">
+                                    <div class="col-12">
+                                        <h5>Number of traverses</h5>
+                                        <input class="form-control" name="tower_traverses" type="number">
+                                    </div>
+                                </div>
+                                <div class="dropdown-divider"></div>
+                                <div class="row">
+                                    <div class="col-12 text-center">
+                                        <button type="reset" class="btn btn-warning">
+                                            <i class="fa fa-redo-alt"></i> Reset
+                                        </button>
+                                        <a id="button-add-towers" class="btn btn-primary" name="save">
+                                            <i class="fa fa-save"></i> Add {{ model_name|slice:"-1" }}
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header" id="headingThree">
+                        <h5 class="mb-0">
+                            <button class="btn btn-primary btn-circle disabled" data-toggle="collapse"
+                                    data-target="#collapseThree">3
+                            </button>
+                            <button class="btn btn-primary disabled" data-toggle="collapse"
+                                    data-target="#collapseThree">
+                                <i class="fa fa-ellipsis-h"></i> Add Bundles
+                            </button>
+                        </h5>
+                    </div>
+                    <div id="collapseThree" class="collapse" aria-labelledby="headingThree" data-parent="#accordion">
+                        <div class="card-body">
+                            <form class="form-horizontal" id="bundles-form" method="">
+                                <div class="row">
+                                    <div class="col-12">
+                                        <h5>Specify number of bundles for each traverse</h5>
+                                    </div>
+                                </div>
+                                <div id="bundles-ender" class="dropdown-divider"></div>
+                                <div class="row">
+                                    <div class="col-12 text-center">
+                                        <button type="reset" class="btn btn-warning">
+                                            <i class="fa fa-redo-alt"></i> Reset
+                                        </button>
+                                        <button id="button-add-bundles" class="btn btn-primary" type="button">
+                                            <i class="fa fa-save"></i> Add {{ model_name|slice:"-1" }}
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header" id="headingFour">
+                        <h5 class="mb-0">
+                            <button class="btn btn-primary btn-circle disabled" data-toggle="collapse"
+                                    data-target="#collapseFour">4
+                            </button>
+                            <button class="btn btn-primary disabled" data-toggle="collapse"
+                                    data-target="#collapseFour">
+                                <i class="fa fa-magic"></i> Submit
+                            </button>
+                        </h5>
+                    </div>
+                    <div id="collapseFour" class="collapse" aria-labelledby="headingFour" data-parent="#accordion">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-12">
+                                    <h5>Submit this circuit?</h5>
+                                </div>
+                            </div>
+                            <div class="dropdown-divider"></div>
+                            <div class="row">
+                                <div class="col-12 text-center">
+                                    <button id="constructor-reset" type="reset" class="btn btn-warning">
+                                        <i class="fa fa-redo"></i> Reset
+                                    </button>
+                                    <button id="constructor-submit" class="btn btn-primary" name="save">
+                                        <i class="fa fa-circle-notch"></i>
+                                        <sup>
+                                            <i class="fa fa-plus"></i>
+                                        </sup> Submit Circuit
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6">
+            <h3 class="text-primary">Circuit Browser</h3>
+            <div id="tree">
+            </div>
+        </div>
+    </div>
+
+{% endblock %}
+
+{% block additional_scripts %}
+    <script src="{% static 'plgis/js/widgets/selector.js' %}"></script>
+    <script src="{% static 'plgis/js/constructor.js' %}"></script>
+    <script>
+        function constructTree(json) {
+            // recursively builds a JSON object as collapsible tree
+            function unpack(o, parent) {
+                // unpacks an object or array or a primitive
+                for (var p in o) { // iterate over object
+                    var li = $('<li></li>').appendTo(parent); //add an <li> tag representing current object
+                    if (o[p] instanceof Array) { // handle arrays
+                        li.text(p) // write out the item
+                        $('<span class="caret"></span>').prependTo(li) //add an clickable caret symbol which (un)collapses a nested list
+                        // items from the following iteration are going to be inserted here
+                        var new_parent = $('<ul class="nested border-left-primary"></ul>').appendTo(li);
+                        for (var i of o[p]) { // iterate over nested entries
+                            $('<li>' + i + '</li>').appendTo(new_parent); // creat an list item and append them to new parent list
+                        }
+                    } else if (o[p] instanceof Object) { // handle nested objects
+                        li.text(p) // write out the item
+                        $('<span class="caret"></span>').prependTo(li) // add caret
+                        // items from the following unpacking are going to be inserted here
+                        var new_parent = $('<ul class="nested border-left-primary"></ul>').appendTo(li);
+                        unpack(o[p], new_parent) // unpack nested object
+                    } else {
+                        li.text(p + ' : ' + o[p]) // handle primitives
+                    }
+                }
+            }
+
+            // construct html tree (as unordered list <ul>)
+            var div = $('#tree');
+            // reset the div
+            div.text('')
+            var root = $('<ul class="border-left-primary"></ul>').appendTo(div);
+            unpack(json, root);
+
+            // add functionality to the tree
+            var toggler = document.getElementsByClassName("caret");
+            var i;
+
+            for (i = 0; i < toggler.length; i++) {
+                toggler[i].addEventListener("click", function () {
+                    this.parentElement.querySelector(".nested").classList.toggle("active");
+                    this.classList.toggle("caret-down");
+                });
+            }
+        }
+
+        // Submit Circiut Handler
+        $('#button-add-circuit').click(function () {
+            // construct circuit JSON
+            var circuit = {}
+            $("#circuit-form :input").filter('input').each(function () {
+                var name = $(this).attr('name');
+                var value = $(this).val();
+                circuit[name] = value;
+            })
+            circuit["towers"] = {}
+
+            //validate
+            $.ajax({
+                "url": "{% url 'constructor' %}",
+                "method": "POST",
+                "headers": {
+                    "X-CSRFToken": $('meta[name="csrf-token"]').attr('content')
+                },
+                "data": {
+                    "task": "validate_circuit",
+                    "data": JSON.stringify(circuit),
+                },
+                "datatype": "json",
+            }).done(function (data, status) {
+                if (data["valid"]) {
+                    $("#alert-circuit-success").toggleClass("fade");
+
+                    tree = circuit
+                    constructTree(tree);
+                    $("#headingTwo button").each(function () {
+                        $(this).removeClass("disabled");
+                    })
+                    $("#collapseTwo").collapse('show');
+
+
+                } else {
+                    console.log('fail')
+                    var errormsg = "Error! "
+                    for (var field in data['errors']) {
+                        errormsg += field + ": " + data['errors'][field] + "\n"
+                    }
+                    $("#alert-circuit-fail").text("");
+                    $("#alert-circuit-fail").prepend(errormsg);
+                    $("#alert-circuit-fail").toggleClass("fade");
+                }
+            });
+
+
+        });
+
+        // Sumbit Towers Handler
+        $("#button-add-towers").click(function () {
+            // get data from the form
+            var data = {};
+            $("#towers-form :input").each(function () {
+                data[$(this).attr('name')] = $(this).val();
+            });
+            data['components'] = []
+            $("#towers-form select#selected option").each(function () {
+                data['components'].push($(this).val())
+            });
+            var towers = {}; // This object will be append to the circuit JSON
+
+            // extract coords from textarea
+            //TODO: Check if there is same number of coordinate pairs as there are towers
+            var coords = []
+            for (var cp of data['tower_points'].split('\n')) {
+                var crds = cp.split(data['tower_points_separator'])
+                coords.push({
+                    'srid': data['tower_points_srid'],
+                    'x': crds[0],
+                    'y': crds[1]
+                });
+            }
+            coords = coords.reverse() //reverse the order, since we'll be popping from this array
+
+            // create traverse placeholders (I miss dict comprehension :-/)
+            // While we're at it, let's generate the widgets of the next form section
+            var traverse_placeholders = {};
+            for (var i = 0; i < data['tower_traverses']; i++) {
+                traverse_placeholders['traverse' + String(i).padStart(2, '0')] = {
+                    'number': i,
+                    'bundles': {}
+                };
+                generate_bundle_modal(i).insertAfter($("#newComponentModal"));
+                generate_traverse_inputs(i).insertBefore($("form#bundles-form div.row:last"));
+                selector_activate_options() // we have generated new selector widget
+
+            }
+            // create the tower obejcts
+            for (var t = data['name_start']; t <= data['name_end']; t++) {
+                var identifier = data['name_prefix'] + String(t).padStart(data['name_padding'], '0');
+                towers[identifier] = {
+                    "identifier": identifier,
+                    "type": data['tower_type'],
+                    "position": coords.pop(),
+                    "components": data['components'],
+                    "traverses": traverse_placeholders,
+                };
+            }
+            // append the data to the JSON
+            tree['towers'] = towers
+            // update the tree view
+            constructTree(tree);
+
+            // open next section
+            $("#headingThree button").each(function () {
+                $(this).removeClass("disabled");
+            })
+            $("#collapseThree").collapse('show');
+        });
+
+        // Submit Bundles Handler
+        $("#button-add-bundles").click(function () {
+            $("#headingFour button").each(function () {
+                $(this).removeClass("disabled");
+            });
+            $("#collapseFour").collapse('show');
+        });
+
+        // Update the hint telling the user what towers are going to be created
+        $("form#towers-form #name-row input").each(function () {
+            $(this).on('input', function () {
+                var prefix = $('#name_prefix').val();
+                var padding = String($('#name_padding').val());
+                var t0 = prefix + $('#name_start').val().padStart(padding, '0');
+                var t1 = String(parseInt($('#name_start').val()) + 1);
+                t1 = prefix + t1.padStart(padding, '0');
+                var tn = prefix + $('#name_end').val().padStart(padding, '0');
+                var example_str = t0 + ',' + t1 + ',...' + tn
+                $('#name_example').text(example_str);
+            })
+        });
+
+        // Add option to a selector
+        $("#newComponentModal button#addNewComponent").click(function () {
+            add_option($("#newComponentModal input").val(), $("#selector-tower-comps"))
+            $("#newComponentModal").modal('hide');
+        });
+
+        // Reset the constructor
+        $("button#constructor-reset").click(function () {
+            tree = {};
+        });
+
+        // Submit constructor
+        $("button#constructor-submit").click(function () {
+            var form = $(
+                `<form action={% url "constructor" %} method="POST">
+                    <input type="hidden" name="csrfmiddlewaretoken" value=${$('meta[name="csrf-token"]').attr('content')}>
+                    <input type="hidden" name="data" value='${JSON.stringify(tree)}'>
+                    {#<button type="submit">Submit</button>#}
+                </form>`)
+           console.log(form);
+           form.appendTo('body').submit();
+        });
+
+
+        {#$(".bundle-modal input[name=cables_number]").on('input',function(){#}
+        {#    // TODO: Disable/remove invalid cable configurations#}
+        {#    var val = $(this).val()#}
+        {#    $(".bundle-modal")#}
+        {# });#}
+
+        /*********************************************************************/
+        selector_activate_options()
+        /*
+         //get testing data - dev phase
+        $.getJSON("{% static 'plgis/json/sample_circuit_2.json' %}", function (data) {
+            constructTree(data);
+        });
+        */
+
+
+    </script>
+
+{% endblock %}

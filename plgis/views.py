@@ -1,9 +1,11 @@
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
 from django.http import HttpResponse, JsonResponse, HttpResponseRedirect
 from django.shortcuts import render, redirect, loader
 from django.urls import reverse
 from django.views.generic import ListView
+
+import json
 
 from .models import *
 from .forms import *
@@ -29,11 +31,6 @@ def index(request):
 
     t = loader.get_template("plgis/dashboard.html")
     return HttpResponse(t.render({}, request))
-
-
-@login_required
-def constructor(request):
-    pass
 
 
 def request_new_account(request):
@@ -148,3 +145,32 @@ def new(request):
         }
         t = loader.get_template("plgis/new.html")
         return HttpResponse(t.render(context, request))
+
+@login_required
+@user_passes_test(lambda u: u.groups.filter(name='managers').exists())
+def constructor(request):
+    if request.POST:
+        if request.is_ajax():
+            task = request.POST.get('task',None)
+            if task == "validate_circuit":
+                data = json.loads(request.POST.get('data'))
+                form = CircuitForm(data)
+                if form.is_valid():
+                    return JsonResponse({
+                        "valid":True
+                    })
+                else:
+                    return JsonResponse({
+                        "valid":False,
+                        "errors":form.errors
+                    })
+        else:
+            print(request.POST['data'])
+            data = json.loads(request.POST['data'])
+            print(data)
+
+    context = {
+        'circuit_form': CircuitForm()
+    }
+    t = loader.get_template("plgis/constructor.html")
+    return HttpResponse(t.render(context,request))

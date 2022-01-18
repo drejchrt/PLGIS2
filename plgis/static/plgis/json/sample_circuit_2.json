@@ -1,0 +1,236 @@
+{
+  "circuit001": {
+    "identifier": "SXM",
+    "voltage": 110,
+    "start": "French Quarter",
+    "end": "Marigot",
+    "towers": {
+      "tower0001": {
+        "identifier": "T_001",
+        "type": "Carrier",
+        "position": {
+          "lat": 16,
+          "lon": 62
+        },
+        "components": [
+          "antenna",
+          "weather station"
+        ],
+        "traverses": {
+          "traverse0": {
+            "number": 0,
+            "bundles": {
+              "bundle01": {
+                "side": "M",
+                "position": 0,
+                "components": [
+                  "fitting",
+                  "insulator"
+                ],
+                "cables": {
+                  "config": "single",
+                  "count": 1
+                }
+              }
+            }
+          },
+          "traverse1": {
+            "number": 1,
+            "bundles": {
+              "bundle01": {
+                "side": "L",
+                "position": 1,
+                "components": [
+                  "fitting",
+                  "insulator"
+                ],
+                "cables": {
+                  "config": "three-top",
+                  "count": 3
+                }
+              },
+              "bundle02": {
+                "side": "R",
+                "position": 1,
+                "components": [
+                  "fitting",
+                  "insulator"
+                ],
+                "cables": {
+                  "config": "three-top",
+                  "count": 3
+                }
+              }
+            }
+          },
+          "traverse2": {
+            "number": 2,
+            "bundles": {
+              "bundle01": {
+                "side": "L",
+                "position": 1,
+                "components": [
+                  "fitting",
+                  "insulator"
+                ],
+                "cables": {
+                  "config": "three-top",
+                  "count": 3
+                }
+              },
+              "bundle02": {
+                "side": "L",
+                "position": 2,
+                "components": [
+                  "fitting",
+                  "insulator"
+                ],
+                "cables": {
+                  "config": "three-top",
+                  "count": 3
+                }
+              },
+              "bundle03": {
+                "side": "R",
+                "position": 2,
+                "components": [
+                  "fitting",
+                  "insulator"
+                ],
+                "cables": {
+                  "config": "three-top",
+                  "count": 3
+                }
+              },
+              "bundle04": {
+                "side": "R",
+                "position": 1,
+                "components": [
+                  "fitting",
+                  "insulator"
+                ],
+                "cables": {
+                  "config": "three-top",
+                  "count": 3
+                }
+              }
+            }
+          }
+        }
+      },
+      "tower0002": {
+        "identifier": "T_002",
+        "type": "Carrier",
+        "position": {
+          "lat": 16,
+          "lon": 62
+        },
+        "components": [
+          "antenna",
+          "weather station"
+        ],
+        "traverses": {
+          "traverse0": {
+            "number": 0,
+            "bundles": {
+              "bundle01": {
+                "side": "M",
+                "position": 0,
+                "components": [
+                  "fitting",
+                  "insulator"
+                ],
+                "cables": {
+                  "config": "single",
+                  "count": 1
+                }
+              }
+            }
+          },
+          "traverse1": {
+            "number": 1,
+            "bundles": {
+              "bundle01": {
+                "side": "L",
+                "position": 1,
+                "components": [
+                  "fitting",
+                  "insulator"
+                ],
+                "cables": {
+                  "config": "three-top",
+                  "count": 3
+                }
+              },
+              "bundle02": {
+                "side": "R",
+                "position": 1,
+                "components": [
+                  "fitting",
+                  "insulator"
+                ],
+                "cables": {
+                  "config": "three-top",
+                  "count": 3
+                }
+              }
+            }
+          },
+          "traverse2": {
+            "number": 2,
+            "bundles": {
+              "bundle01": {
+                "side": "L",
+                "position": 1,
+                "components": [
+                  "fitting",
+                  "insulator"
+                ],
+                "cables": {
+                  "config": "three-top",
+                  "count": 3
+                }
+              },
+              "bundle02": {
+                "side": "L",
+                "position": 2,
+                "components": [
+                  "fitting",
+                  "insulator"
+                ],
+                "cables": {
+                  "config": "three-top",
+                  "count": 3
+                }
+              },
+              "bundle03": {
+                "side": "R",
+                "position": 2,
+                "components": [
+                  "fitting",
+                  "insulator"
+                ],
+                "cables": {
+                  "config": "three-top",
+                  "count": 3
+                }
+              },
+              "bundle04": {
+                "side": "R",
+                "position": 1,
+                "components": [
+                  "fitting",
+                  "insulator"
+                ],
+                "cables": {
+                  "config": "three-top",
+                  "count": 3
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

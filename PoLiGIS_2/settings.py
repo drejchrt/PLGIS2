@@ -133,7 +133,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # django-auto-logout Settings:
 AUTO_LOGOUT = {
-    'IDLE_TIME': 600, # Logout after 10 minutes beeing idle
+    'IDLE_TIME': 6000, # Logout after 10 minutes being idle
     'MESSAGE': 'The session has expired. Please login again to continue.',
 }
 

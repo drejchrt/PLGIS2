@@ -1,0 +1,27 @@
+/* Selector Widget Styling */
+.selector select {
+    width: 100%;
+    border-bottom-left-radius: .35rem;
+    border-bottom-right-radius: .35rem;
+}
+
+.selector select option:checked {
+    background-color: black;
+}
+
+.selector .selector-subheader {
+    color: #fff;
+    display: block;
+    width: 100%;
+    background-color: #36b9cc;
+    border-top-left-radius: .35rem;
+    border-top-right-radius: .35rem;
+}
+
+.selector-subheader-info {
+    background-color: #36b9cc;
+}
+
+.selector-subheader-success {
+    background-color: #1cc88a;
+}

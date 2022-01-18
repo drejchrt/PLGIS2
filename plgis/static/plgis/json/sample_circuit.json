@@ -1,0 +1,234 @@
+{
+    "identifier": "SXM",
+    "voltage": 110,
+    "start": "French Quarter",
+    "end": "Marigot",
+    "towers": [
+        {
+            "identifier": "T_001",
+            "type": "Carrier",
+            "position": {
+                "lat": 16,
+                "lon": 62
+            },
+            "components": [
+                "antenna",
+                "weather station"
+            ],
+            "traverses": [
+                {
+                    "number": 0,
+                    "bundles": [
+                        {
+                            "side": "M",
+                            "position": 0,
+                            "components": [
+                                "fitting",
+                                "insulator"
+                            ],
+                            "cables": {
+                                "config": "single",
+                                "count": 1
+                            }
+                        }
+                    ]
+                },
+                {
+                    "number": 1,
+                    "bundles": [
+                        {
+                            "side": "L",
+                            "position": 1,
+                            "components": [
+                                "fitting",
+                                "insulator"
+                            ],
+                            "cables": {
+                                "config": "three-top",
+                                "count": 3
+                            }
+                        },
+                        {
+                            "side": "R",
+                            "position": 1,
+                            "components": [
+                                "fitting",
+                                "insulator"
+                            ],
+                            "cables": {
+                                "config": "three-top",
+                                "count": 3
+                            }
+                        }
+                    ]
+                },
+                {
+                    "number": 2,
+                    "bundles": [
+                        {
+                            "side": "L",
+                            "position": 1,
+                            "components": [
+                                "fitting",
+                                "insulator"
+                            ],
+                            "cables": {
+                                "config": "three-top",
+                                "count": 3
+                            }
+                        },
+                        {
+                            "side": "L",
+                            "position": 2,
+                            "components": [
+                                "fitting",
+                                "insulator"
+                            ],
+                            "cables": {
+                                "config": "three-top",
+                                "count": 3
+                            }
+                        },
+                        {
+                            "side": "R",
+                            "position": 2,
+                            "components": [
+                                "fitting",
+                                "insulator"
+                            ],
+                            "cables": {
+                                "config": "three-top",
+                                "count": 3
+                            }
+                        },
+                        {
+                            "side": "R",
+                            "position": 1,
+                            "components": [
+                                "fitting",
+                                "insulator"
+                            ],
+                            "cables": {
+                                "config": "three-top",
+                                "count": 3
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "identifier": "T_002",
+            "type": "Carrier",
+            "position": {
+                "lat": 16,
+                "lon": 62
+            },
+            "components": [
+                "antenna",
+                "weather station"
+            ],
+            "traverses": [
+                {
+                    "number": 0,
+                    "bundles": [
+                        {
+                            "side": "M",
+                            "position": 0,
+                            "components": [
+                                "fitting",
+                                "insulator"
+                            ],
+                            "cables": {
+                                "config": "single",
+                                "count": 1
+                            }
+                        }
+                    ]
+                },
+                {
+                    "number": 1,
+                    "bundles": [
+                        {
+                            "side": "L",
+                            "position": 1,
+                            "components": [
+                                "fitting",
+                                "insulator"
+                            ],
+                            "cables": {
+                                "config": "three-top",
+                                "count": 3
+                            }
+                        },
+                        {
+                            "side": "R",
+                            "position": 1,
+                            "components": [
+                                "fitting",
+                                "insulator"
+                            ],
+                            "cables": {
+                                "config": "three-top",
+                                "count": 3
+                            }
+                        }
+                    ]
+                },
+                {
+                    "number": 2,
+                    "bundles": [
+                        {
+                            "side": "L",
+                            "position": 1,
+                            "components": [
+                                "fitting",
+                                "insulator"
+                            ],
+                            "cables": {
+                                "config": "three-top",
+                                "count": 3
+                            }
+                        },
+                        {
+                            "side": "L",
+                            "position": 2,
+                            "components": [
+                                "fitting",
+                                "insulator"
+                            ],
+                            "cables": {
+                                "config": "three-top",
+                                "count": 3
+                            }
+                        },
+                        {
+                            "side": "R",
+                            "position": 2,
+                            "components": [
+                                "fitting",
+                                "insulator"
+                            ],
+                            "cables": {
+                                "config": "three-top",
+                                "count": 3
+                            }
+                        },
+                        {
+                            "side": "R",
+                            "position": 1,
+                            "components": [
+                                "fitting",
+                                "insulator"
+                            ],
+                            "cables": {
+                                "config": "three-top",
+                                "count": 3
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
