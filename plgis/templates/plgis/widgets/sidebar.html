@@ -40,11 +40,6 @@
                 <i class="fa fa-broadcast-tower"></i>
                 <span>Towers</span></a>
         </li>
-        <li class="nav-item">
-            <a class="nav-link" href="{% url 'components' %}">
-                <i class="fa fa-toolbox"></i>
-                <span>Components</span></a>
-        </li>
         <!-- Divider -->
         <hr class="sidebar-divider">
 
@@ -54,6 +49,26 @@
                 <span>Circuit Constructor</span></a>
         </li>
 
+        <!-- Divider -->
+        <hr class="sidebar-divider">
+
+    {% endif %}
+
+    {% if request.user|has_group:"inspectors" %}
+        <div class="sidebar-heading">
+            Componets Management
+        </div>
+
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'circuits' %}">
+                <i class="fa fa-circle-notch"></i>
+                <span>Circuits</span></a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'towers' %}">
+                <i class="fa fa-broadcast-tower"></i>
+                <span>Towers</span></a>
+        </li>
         <!-- Divider -->
         <hr class="sidebar-divider">
 

@@ -1,14 +1,37 @@
 {% extends 'plgis/base.html' %}
 {% load custom_tags %}
 {% load crispy_forms_tags %}
+{% load static %}
 
 {% block title %}
     PLGIS | Edit {{ model_name|slice:"-1"|capfirst }} {{ object.identifier }}
 {% endblock title %}
 
+{% block additional_styles %}
+    {% if model_name == 'towers' %}
+        <script src="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.10.0/build/ol.js"></script>
+        {{ form.media }}
+    {% endif %}
+    {% if model_name == 'circuits' %}
+        <link href="{% static 'sb-admin-2/vendor/datatables/dataTables.bootstrap4.min.css' %}" rel="stylesheet">
+        <style>
+            tr.link:hover {
+                background: #eeeeee;
+                text-decoration: none;
+
+            }
+
+            td a {
+                display: block;
+                text-decoration: inherit;
+            }
+        </style>
+    {% endif %}
+{% endblock %}
+
 
 {% block modals %}
-     <!-- delete object modal -->
+    <!-- delete object modal -->
     <div class="modal fade" tabindex="-1" role="dialog" id="deleteModal">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
@@ -24,7 +47,8 @@
                     <button class="btn btn-secondary" type="button" data-dismiss="modal">
                         <i class="fa fa-ban"></i> Cancel
                     </button>
-                    <a class="btn btn-danger" href="{% url model_name|slice:":-1"|concat:"_delete" object.pk %}">
+                    <a class="btn btn-danger" hre
+                       f="{% url model_name|slice:":-1"|concat:"_delete" object.pk %}">
                         <i class="fa fa-trash"></i> Delete
                     </a>
                 </div>
@@ -64,4 +88,17 @@
         </div>
         <div class="col-3"></div>
     </div>
+{% endblock %}
+
+{% block additional_scripts %}
+    {% if model_name == 'circuits' %}
+        <script src="{% static 'sb-admin-2/vendor/datatables/jquery.dataTables.min.js' %}"></script>
+        <script src="{% static 'sb-admin-2/vendor/datatables/dataTables.bootstrap4.min.js' %}"></script>
+
+        <script>
+            $(document).ready(function () {
+                $('#dataTable').DataTable();
+            });
+        </script>
+    {% endif %}
 {% endblock %}

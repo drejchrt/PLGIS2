@@ -1,5 +1,6 @@
-from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.gis.geos import Point
 from django.http import HttpResponse, JsonResponse, HttpResponseRedirect
 from django.shortcuts import render, redirect, loader
 from django.urls import reverse
@@ -14,14 +15,11 @@ from .forms import *
 MODELS = {
     'circuits': Circuit,
     'towers': Tower,
-    'spanfields': SpanField,
-    'components': Component,
+
 }
 FORMS = {
     'circuits': CircuitForm,
     'towers': TowerForm,
-    'spanfields': SpanFieldForm,
-    'components': ComponentForm,
 }
 
 
@@ -67,10 +65,15 @@ def detail(request, id):
         'fields': model.FIELDS.values(),
     }
     t = loader.get_template("plgis/detail.html")
+    if model_str == 'circuits':
+        context['towers'] = Tower.objects.filter(circuit_id=id)
+        context['t_headers'] = Tower.FIELDS.keys()
+        context['t_fields'] = Tower.FIELDS.values()
     return HttpResponse(t.render(context, request))
 
 
 @login_required
+@user_passes_test(lambda u: u.groups.filter(name='managers').exists())
 def edit(request, id):
     model_str = request.path.split('/')[1]
     model = MODELS[model_str]
@@ -99,6 +102,7 @@ def edit(request, id):
 
 
 @login_required
+@user_passes_test(lambda u: u.groups.filter(name='managers').exists())
 def delete(request, id):
     model_str = request.path.split('/')[1]
     model = MODELS[model_str]
@@ -108,6 +112,7 @@ def delete(request, id):
 
 
 @login_required
+@user_passes_test(lambda u: u.groups.filter(name='managers').exists())
 def new(request):
     model_str = request.path.split('/')[1]
     model = MODELS[model_str]
@@ -165,8 +170,26 @@ def constructor(request):
                         "errors":form.errors
                     })
         else:
-            print(request.POST['data'])
             data = json.loads(request.POST['data'])
+            circuit = Circuit(identifier=data['identifier'],
+                              voltage=data['voltage'],
+                              substation_start=data['substation_start'],
+                              substation_end=data['substation_end']
+                              )
+            circuit.save()
+            print(data)
+            for _,t in data['towers'].items():
+                tower = Tower(identifier=t['identifier'],
+                              circuit=circuit,
+                              type=t['type'],
+                              position=Point(float(t['position']['x']),
+                                             float(t['position']['y']),
+                                             srid=t['position']['srid']
+                                             ),
+                              components=t['components'],
+                              traverses=t['traverses'],
+                              )
+                tower.save()
             print(data)
 
     context = {

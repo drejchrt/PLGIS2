@@ -1,5 +1,7 @@
-from django.contrib.gis.db import models
 from django.contrib.auth.models import User
+from django.contrib.gis.db import models
+from django.contrib.postgres.fields import ArrayField
+from django.db.models import JSONField
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.urls import reverse
@@ -173,6 +175,7 @@ class Circuit(models.Model):
     substation_end = models.CharField(max_length=255, blank=True)
     date_added = models.DateTimeField(auto_now_add=True)
 
+
     FIELDS = {
         'ID': identifier,
         'Voltage': voltage,
@@ -191,53 +194,23 @@ class Circuit(models.Model):
         return self.__repr__()
 
 class Tower(models.Model):
-    identifier = models.CharField(max_length=255, unique=True)
+    identifier = models.CharField(max_length=255)
     circuit = models.ForeignKey(Circuit, on_delete=models.CASCADE)
     type = models.CharField(max_length=255)  # TODO: Choices
+    components = ArrayField(models.CharField(max_length=255), default=list)
     position = models.PointField()
+    traverses = JSONField(default=dict)
+
 
     FIELDS = {
         'ID': identifier,
         'Circuit': circuit,
         'Type': type,
+        'Components': components,
         'Position': position
     }
 
-
-class SpanField(models.Model):
-    tower_start = models.ForeignKey(Tower, related_name='tower_start', on_delete=models.CASCADE)
-    tower_end = models.ForeignKey(Tower, related_name='tower_end', on_delete=models.CASCADE)
+    def get_absolute_url(self):
+        return reverse('tower',kwargs={'id':self.pk})
 
 
-    # TODO: Autofield identifier: tower_start.identifier
-    # TODO: Check tower_end != tower_start @ save()
-    @property
-    def identifier(self):
-        return self.tower_start.identifier + '-' + self.tower_end.identifier
-
-    FIELDS = {
-        'ID': identifier,
-        'Start': tower_start,
-        'End': tower_end
-    }
-
-class Macro(models.Model):
-    tower = models.ForeignKey(Tower, on_delete=models.CASCADE)
-    span_field = models.ForeignKey(SpanField, on_delete=models.CASCADE)
-
-    HEADERS = ('ID', 'Circuit', 'Type', 'Position')
-
-    # TODO: Check that either field is NULL @ save()
-
-
-class Component(models.Model):
-    type = models.CharField(max_length=255)
-    macro = models.ForeignKey(Macro, on_delete=models.CASCADE)
-    props = models.ForeignKey(Dictionary, on_delete=models.CASCADE)
-
-    FIELDS = {
-        'ID':'id',
-        'Type': type,
-        'Macro': macro,
-        'Props': props
-    }

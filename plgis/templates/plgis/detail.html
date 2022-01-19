@@ -1,8 +1,25 @@
 {% extends 'plgis/base.html' %}
+{% load static %}
 {% load custom_tags %}
 
 {% block title %} PLGIS | {{ model_name|slice:":-1"|capfirst }} {{ object.identifier }} {% endblock %}
 
+{% block additional_styles %}
+    {% if model_name == 'circuits' or model_name == 'towers' %}
+        <link rel="stylesheet"
+              href="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.12.0/css/ol.css"
+              type="text/css">
+        <link rel="stylesheet"
+              href="{% static "plgis/css/map.css" %}"
+              type="text/css">
+        <style>
+            .map {
+                height: 400px;
+                width: 100%;
+            }
+        </style>
+    {% endif %}
+{% endblock %}
 
 {% block modals %}
     <!-- delete object modal -->
@@ -33,7 +50,7 @@
 
 
 {% block content %}
-    <div class="row">
+    <div class="row mb-3">
         <div class="col-3"></div>
         <div class="col-6">
             <div class="card">
@@ -42,8 +59,23 @@
                 </div>
                 <div class="card-body">
                     {% for k,v in headers|temp_zip:fields %}
-                        {{ k }}: {{ object|temp_getattr:v.name }}<br>
+                        <div class="row">
+                            <div class="col-2 text-primary">{{ k }}:</div>
+                            <div class="col-10>">{{ object|temp_getattr:v.name }}</div>
+                        </div>
                     {% endfor %}
+                    {% if model_name == 'towers' %}
+                        <div class="row">
+                            <div class="col-12">
+                                <div id="tower_position" class="map">
+                                </div>
+                                <div id="popup" class="ol-popup">
+                                    <a href="#" id="popup-closer" class="ol-popup-closer"></a>
+                                    <div id="popup-content"></div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
                 </div>
                 <div class="card-footer text-center">
                     <a href="{% url model_name|slice:":-1"|concat:"_edit" object.pk %}" class="btn btn-primary">
@@ -57,4 +89,245 @@
         </div>
         <div class="col-3"></div>
     </div>
+
+    {% if model_name == "circuits" %}
+        <!-- Circuit Map -->
+        <div class="row">
+            <div class="col-3"></div>
+            <div class="col-6">
+                <div class="card shadow mb-4">
+                    <div class="card-header py-3">
+                        <h6>Circiut</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="col-12">
+                            <div id="circuit_position" class="map">
+                            </div>
+                            <div id="popup" class="ol-popup">
+                                <a href="#" id="popup-closer" class="ol-popup-closer"></a>
+                                <div id="popup-content"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-3"></div>
+        </div>
+        <!-- Associated Tower List -->
+        <div class="row">
+            <div class="col-3"></div>
+            <div class="col-6">
+                <div class="card shadow mb-4">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">Associated Towers</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                                <thead>
+                                <tr>
+                                    {% for h in t_headers %}
+                                        <th>{{ h }}</th>
+                                    {% endfor %}
+                                </tr>
+                                </thead>
+                                <tfoot>
+                                <tr>
+                                    {% for h in t_headers %}
+                                        <th>{{ h }}</th>
+                                    {% endfor %}
+                                </tr>
+                                </tfoot>
+                                <tbody>
+                                {% for t in towers %}
+                                    <tr class="link">
+                                        {% for f in t_fields %}
+                                            <td>
+                                                <a href="{{ t.get_absolute_url }}">
+                                                    {{ t|temp_getattr:f.name }}
+                                                </a>
+                                            </td>
+                                        {% endfor %}
+                                    </tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-3"></div>
+        </div>
+    {% endif %}
+
+{% endblock %}
+
+{% block additional_scripts %}
+    {% if model_name == 'circuits' %}
+        <script src="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.12.0/build/ol.js"></script>
+        <script>
+            var towers_layer = new ol.layer.Vector({
+                source: new ol.source.Vector({
+                    features: [
+                        {% for t in towers %}
+                            new ol.Feature({
+                                geometry: new ol.geom.Point(ol.proj.fromLonLat([
+                                    {{ t.position.x }},
+                                    {{ t.position.y }}
+                                ])),
+                                name: "{{ t.identifier }}"
+                            }),
+                        {% endfor %}
+                    ]
+                })
+            });
+
+            var circuit_layer = new ol.layer.Vector({
+                source: new ol.source.Vector({
+                    features: [
+                        new ol.Feature({
+                            geometry: new ol.geom.LineString([
+                                {% for t in towers %}
+                                    ol.proj.fromLonLat([{{ t.position.x }},{{ t.position.y }}]),
+                                {% endfor %}
+                            ])
+                        })
+                    ]
+                })
+            });
+
+            var map = new ol.Map({
+                target: 'circuit_position',
+                layers: [
+                    new ol.layer.Tile({
+                        source: new ol.source.OSM()
+                    }),
+                    circuit_layer,
+                    towers_layer,
+
+                ],
+                view: new ol.View({
+                    center: ol.proj.fromLonLat([0, 0]),
+                    zoom: 16
+                })
+            });
+
+            map.getView().fit(circuit_layer.getSource().getExtent());
+
+            var container = document.getElementById('popup');
+            var content = document.getElementById('popup-content');
+            var closer = document.getElementById('popup-closer');
+
+            var overlay = new ol.Overlay({
+                element: container,
+                autoPan: true,
+                autoPanAnimation: {
+                    duration: 250
+                }
+            });
+            map.addOverlay(overlay);
+
+            closer.onclick = function () {
+                overlay.setPosition(undefined);
+                closer.blur();
+                return false;
+            };
+
+            map.on('singleclick', function (event) {
+                map.forEachFeatureAtPixel(event.pixel, function(f,l){
+                    if (l == towers_layer){
+                        var coordinate = event.coordinate;
+                        content.innerHTML = '<b>Tower ' + f.get('name') + '</b>';
+                        overlay.setPosition(coordinate);
+                    }
+                })
+                {#if (map.hasFeatureAtPixel(event.pixel) === true) {#}
+                {##}
+                {#    towers_layer.getFeatures(event.pixel);#}
+                {#    content.innerHTML = '<b>Tower </b>';#}
+                {#    overlay.setPosition(coordinate);#}
+                {# } else {#}
+                {#    overlay.setPosition(undefined);#}
+                {#    closer.blur();#}
+                {# }#}
+            });
+
+        </script>
+
+        <!-- Tables -->
+        <script src="{% static 'sb-admin-2/vendor/datatables/jquery.dataTables.min.js' %}"></script>
+        <script src="{% static 'sb-admin-2/vendor/datatables/dataTables.bootstrap4.min.js' %}"></script>
+
+        <script>
+            $(document).ready(function () {
+                $('#dataTable').DataTable();
+            });
+        </script>
+    {% endif %}
+
+
+    {% if model_name == 'towers' %}
+        <script src="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.12.0/build/ol.js"></script>
+        <script>
+            var map = new ol.Map({
+                target: 'tower_position',
+                layers: [
+                    new ol.layer.Tile({
+                        source: new ol.source.OSM()
+                    }),
+                    new ol.layer.Vector({
+                        source: new ol.source.Vector({
+                            features: [
+                                new ol.Feature({
+                                    geometry: new ol.geom.Point(ol.proj.fromLonLat([
+                                        {{ object.position.x }},
+                                        {{ object.position.y }}
+                                    ]))
+                                })
+                            ]
+                        })
+                    })
+                ],
+                view: new ol.View({
+                    center: ol.proj.fromLonLat([{{ object.position.x }}, {{ object.position.y }}]),
+                    zoom: 16
+                })
+            });
+
+            var container = document.getElementById('popup');
+            var content = document.getElementById('popup-content');
+            var closer = document.getElementById('popup-closer');
+
+            var overlay = new ol.Overlay({
+                element: container,
+                autoPan: true,
+                autoPanAnimation: {
+                    duration: 250
+                }
+            });
+            map.addOverlay(overlay);
+
+            closer.onclick = function () {
+                overlay.setPosition(undefined);
+                closer.blur();
+                return false;
+            };
+
+            map.on('singleclick', function (event) {
+                if (map.hasFeatureAtPixel(event.pixel) === true) {
+                    var coordinate = event.coordinate;
+
+                    content.innerHTML = '<b>Tower {{ object.identifier }}</b>';
+                    overlay.setPosition(coordinate);
+                } else {
+                    overlay.setPosition(undefined);
+                    closer.blur();
+                }
+            });
+
+            content.innerHTML = '<b>Tower {{ object.identifier }}</b>';
+            overlay.setPosition(ol.proj.fromLonLat([{{ object.position.x }}, {{ object.position.y }}]));
+
+        </script>
+    {% endif %}
 {% endblock %}

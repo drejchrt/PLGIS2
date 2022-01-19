@@ -1,4 +1,5 @@
 from django import forms
+from django.contrib.gis import forms as gforms
 from django.forms import ModelForm
 from django.utils.translation import gettext_lazy as _
 
@@ -21,17 +22,11 @@ class CircuitForm(ModelForm):
         pass
 
 class TowerForm(ModelForm):
+    position = gforms.PointField(widget=gforms.OSMWidget(attrs={
+        'map_height':506,
+        'map_width':760
+    }))
     class Meta:
         model = Tower
         fields = '__all__'
 
-
-class SpanFieldForm(ModelForm):
-    class Meta:
-        model = SpanField
-        fields = '__all__'
-
-class ComponentForm(ModelForm):
-    class Meta:
-        model = Component
-        fields = '__all__'
