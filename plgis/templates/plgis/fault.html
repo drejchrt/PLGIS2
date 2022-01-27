@@ -1,0 +1,275 @@
+{% extends 'plgis/base.html' %}
+{% load static %}
+
+
+{% block title %} PLGIS | Fault {{ fault }} {% endblock %}
+
+{% block additional_styles %}
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <link rel="stylesheet" href="{% static 'plgis/css/canvas.css' %}">
+    <style>
+        .carousel {
+            background: rgb(34, 74, 190);
+            background: radial-gradient(circle, rgba(34, 74, 190, 1) 20%, rgba(78, 115, 223, 1) 50%);
+            text-align: center;
+            border-radius: .35rem;
+        }
+
+        .carousel svg {
+            margin: 0 auto;
+            height: 75vh;
+        }
+    </style>
+{% endblock %}
+
+{% block modals %}
+    <div class="modal fade" id="delete-modal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+         aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLabel">Are you sure?</h5>
+                    <button class="close" type="button" data-dismiss="modal" aria-label="Close">
+                        <span>×</span>
+                    </button>
+                </div>
+                <div class="modal-body">Do you really want to <strong>delete this fault</strong>?</div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" type="button" data-dismiss="modal">
+                        <i class="fa fa-cancel"></i> Cancel
+                    </button>
+                    <a class="btn btn-danger" href="{% url 'fault_delete' fault_id=fault.id %}">
+                        <i class="fa fa-trash"></i> Delete
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="edit-modal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+         aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLabel">Edit Fault</h5>
+                    <button class="close" type="button" data-dismiss="modal" aria-label="Close">
+                        <span>×</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form class="fault-form" action="{% url 'fault_edit' fault_id=fault.id %}" method="POST">
+                        {% include 'plgis/forms/fault_form.html' %}
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" type="button" data-dismiss="modal">
+                        <i class="fa fa-ban"></i> Cancel
+                    </button>
+                    <a class="btn btn-primary" href="{% url 'fault_delete' fault_id=fault.id %}">
+                        <i class="fa fa-save"></i> Save Changes
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock modals %}
+
+{% block content %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div id="carouselExampleIndicators" class="carousel slide" data-ride="carousel" data-interval="false">
+                <ol class="carousel-indicators">
+                    {% for i in images %}
+                        <li data-target="#carouselExampleIndicators" data-slide-to="{{ forloop.counter0 }}"
+                                {% if forloop.counter0 == 0 %} class="active" {% endif %}></li>
+                    {% endfor %}
+                </ol>
+                <div class="carousel-inner">
+                    {% for i in images %}
+                        <div id="canvas" class="carousel-item {% if forloop.counter0 == 0 %}active{% endif %}">
+                            <svg viewBox="0 0 {{ i.get_dimensions.0 }} {{ i.get_dimensions.1 }} ">
+                                <image href="\{{ i.get_media_path }}"
+                                       x="0"
+                                       y="0"
+                                       draggable="false"
+                                       transform="translate(0,0)"/>
+                                {% for mark in marks %}
+                                    {% if mark.image == i %}
+                                        <polygon id="{{ mark.id }}" points="{{ mark.marking }}"/>
+                                    {% endif %}
+                                {% endfor %}
+                            </svg>
+                            <div class="carousel-caption d-none d-md-block">
+                                <h5>{{ fault }}@{{ i.get_fname }}</h5>
+                                <p>Circuit: {{ i.circuit.id }}</p>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+                <a class="carousel-control-prev" href="#carouselExampleIndicators" role="button" data-slide="prev">
+                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                    <span class="sr-only">Previous</span>
+                </a>
+                <a class="carousel-control-next" href="#carouselExampleIndicators" role="button" data-slide="next">
+                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                    <span class="sr-only">Next</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-6">
+            <div class="card shadow">
+                <div class="card-header">
+                    <h3>{{ fault.get_macro_type }} Fault</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <ul>
+                                <li>Component: {{ fault.component }}</li>
+                                <li>Type: {{ fault.type }}</li>
+                                <li>Severity: {{ fault.severity }}</li>
+                                <li>Author: <a href="{% url 'user' id=fault.author.id %}">{{ fault.author }}</a></li>
+                                <li>Date Inspected: {{ fault.date_added }}</li>
+                            </ul>
+                        </div>
+                        <div class="col-6">
+                            <ul>
+                                <li>Circuit: <a href="{% url 'circuit' id=circuit.id %}">{{ circuit.identifier }}</a>
+                                </li>
+                                <li>Section: <a
+                                        href="{% url 'inspection' circuit_id=circuit.id section_id=fault.address.section %}">{{ fault.address.section }}</a>
+                                </li>
+                                <li>Traverse: {{ fault.address.traverse }}</li>
+                                <li>Side: {{ fault.address.side }}</li>
+                                {% if fault.get_macro_type == 'Span Field' %}
+                                    <li>Bundle: {{ fault.address.bundle }}</li>
+                                    <li>Cable: {{ fault.address.cable }}</li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                        <div class="row">
+                            <div class="col-12">
+                                Comment:
+                                <p>{{ fault.comment }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer text-center">
+                    <button class="btn btn-danger" data-toggle="modal" data-target="#delete-modal">
+                        <i class="fa fa-trash"></i> Delete
+                    </button>
+                    <button class="btn btn-primary" data-toggle="modal" data-target="#edit-modal">
+                        <i class="fa fa-pen"></i> Edit
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="col-6">
+            <div class="card shadow">
+                <div class="card-header"></div>
+                <div class="card-body">
+                    <div class="map">
+
+                    </div>
+                </div>
+                <div class="card-footer"></div>
+            </div>
+        </div>
+
+    </div>
+{% endblock %}
+
+{% block additional_scripts %}
+    <script>
+        var $form = $('form.fault-form')
+
+        $form.find('.address:input').on('focus', function () {
+            $.ajax({
+                url: '{% url 'fault' fault_id=fault.id  %}',
+                type: "POST",
+                headers: {
+                    "X-CSRFToken": $('meta[name="csrf-token"]').attr('content')
+                },
+                dataType: 'json',
+                data: new FormData($form.get(0)),
+                processData: false,
+                contentType: false,
+                success: function (data) {
+                    if (data.circuit) {
+                        for (var c of data.circuit) {
+                            $(`<option value="${c[0]}">${c[1]}</option>`)
+                                .appendTo($form.find('#circuit'))
+                        }
+                        return
+                    }
+                    if (data.section_type) {
+                        for (var st of data.section_type) {
+                            $(`<option value="${st[0]}">${st[1]}</option>`)
+                                .appendTo($form.find('#section-type'))
+                        }
+                    }
+                    if (data.section) {
+                        for (var t of data.section) {
+                            $(`<option value="${t[0]}">${t[1]}</option>`)
+                                .appendTo($form.find('#section'))
+                        }
+                    }
+                    if (data.traverse) {
+                        for (var t of data.traverse) {
+                            $(`<option value="${t}">${t}</option>`)
+                                .appendTo($form.find('#traverse'))
+                        }
+                    }
+                    if (data.side) {
+                        for (var s of data.side) {
+                            $(`<option value="${s}">${s}</option>`)
+                                .appendTo($form.find('#side'))
+                        }
+                    }
+                    if (data.bundle) {
+                        for (var b of data.bundle) {
+                            $(`<option value="${b}">${b}</option>`)
+                                .appendTo($form.find('#bundle'))
+                        }
+                    }
+                    if (data.cable) {
+                        for (var c of data.cable) {
+                            $(`<option value="${c}">${c}</option>`)
+                                .appendTo($form.find('#cable'))
+                        }
+                    }
+                },
+            })
+
+
+        });
+
+        $form.find("select#section-type").on('input', function () {
+            console.log('fired');
+            if ($(this).val() == 'tower') {
+                $form.find('select#bundle').attr('disabled', true)
+                $form.find('select#cable').attr('disabled', true)
+            }
+            //else {
+            //    $form.find('select#side').attr('disabled', true)
+            //}
+        });
+
+        // add new mark type from the text input into the options of the neighboring select
+        $form.find('button#add-new-type').click(function () {
+            var val = $form.find('input#new-type').val();
+            $(`<option value="${val}">${val}</option>`)
+                .appendTo($form.find('select#type'));
+        });
+        // add new component from the text input into the options of the neighboring select
+        $form.find('button#add-new-component').click(function () {
+            var val = $form.find('input#new-component').val();
+            $(`<option value="${val}">${val}</option>`)
+                .appendTo($form.find('select#component'));
+        });
+    </script>
+{% endblock %}

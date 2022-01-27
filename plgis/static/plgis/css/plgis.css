@@ -7,3 +7,7 @@
     transform: rotate(360deg) scale(1.5);
 
 }
+
+.alert.fade {
+    display: none;
+}

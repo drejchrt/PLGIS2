@@ -23,6 +23,7 @@
 
 {% block modals %}
     <!-- delete object modal -->
+    {% if user|has_group:"manager" %}
     <div class="modal fade" tabindex="-1" role="dialog" id="deleteModal">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
@@ -46,6 +47,7 @@
         </div>
     </div>
     <!-- end of delete object modal -->
+    {% endif %}
 {% endblock %}
 
 
@@ -60,8 +62,8 @@
                 <div class="card-body">
                     {% for k,v in headers|temp_zip:fields %}
                         <div class="row">
-                            <div class="col-2 text-primary">{{ k }}:</div>
-                            <div class="col-10>">{{ object|temp_getattr:v.name }}</div>
+                            <div class="col-3 text-primary">{{ k }}:</div>
+                            <div class="col-9>">{{ object|temp_getattr:v.name }}</div>
                         </div>
                     {% endfor %}
                     {% if model_name == 'towers' %}
@@ -78,12 +80,14 @@
                     {% endif %}
                 </div>
                 <div class="card-footer text-center">
+                    {% if user|has_group:"manager" %}
                     <a href="{% url model_name|slice:":-1"|concat:"_edit" object.pk %}" class="btn btn-primary">
                         <i class="fas fa-pen"></i> Edit {{ model_name|slice:":-1" }}
                     </a>
                     <button class="btn btn-danger" data-toggle="modal" data-target="#deleteModal">
                         <i class="fa fa-trash"></i> Delete {{ model_name|slice:":-1" }}
                     </button>
+                    {% endif %}
                 </div>
             </div>
         </div>

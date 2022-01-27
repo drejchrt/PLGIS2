@@ -1,0 +1,90 @@
+<div class="row">
+    <div class="col-6">
+        <label for="circuit">Circuit</label>
+        <select id="circuit" class="form-control address" name="circuit">
+
+        </select>
+    </div>
+    <div class="col-2">
+        <label for="section-type">Section Type:</label>
+        <select id="section-type" class="form-control address" name="section_type">
+        </select>
+    </div>
+    <div class="col-4">
+        <label for="section">Section</label>
+        <select id="section" class="form-control address" name="section"></select>
+    </div>
+</div>
+<div class="row">
+    <div class="col-6">
+        <label for="traverse">Traverse:</label>
+        <select id="traverse" class="form-control address" name="traverse"></select>
+    </div>
+    <div class="col-6">
+        <label for="side">Side:</label>
+        <select id="side" class="form-control address" name="side"></select>
+    </div>
+</div>
+<div class="row">
+    <div class="col-6">
+        <label for="bundle">Bundle</label>
+        <select id="bundle" class="form-control address" name="bundle"></select>
+    </div>
+    <div class="col-6">
+        <label for="cable">Cable</label>
+        <select id="cable" class="form-control address" name="cable"></select>
+    </div>
+</div>
+<div class="row">
+    <div class="col-6">
+        <label for="component">Component:</label>
+        <select name="component" id="component" class="form-control">
+            {% for c in components %}
+                <option value="{{ c }}">{{ c }}</option>
+            {% endfor %}
+
+        </select>
+    </div>
+    <div class="col-6">
+        <label for="new-component">Add New Component:</label>
+        <div class="input-group">
+            <input id="new-component" type="text" name="new-component" class="form-control">
+            <button id="add-new-component" class="btn btn-primary input-group-append" type="button">
+                <i class="fa fa-plus"></i> Add Component
+            </button>
+        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="col-6">
+        <label for="type">Type:</label>
+        <select name="type" id="type" class="form-control">
+             {% for t in types %}
+                 <option value="{{ t }}">{{ t }}</option>
+             {% endfor %}
+        </select>
+    </div>
+    <div class="col-6">
+        <label for="new-type">Add New Type:</label>
+        <div class="input-group">
+            <input id="new-type" type="text" name="new-type" class="form-control">
+            <button id="add-new-type" class="btn btn-primary input-group-append" type="button">
+                <i class="fa fa-plus"></i> Add Type
+            </button>
+        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="col-4">
+        <label for="severity"></label>
+        <select id="severity" class="form-control" name="severity">
+            <option value="1"> 1 (Good to know)</option>
+            <option value="2"> 2 (Repair in next repair stage)</option>
+            <option value="3"> 3 (Immediate attention required)</option>
+        </select>
+    </div>
+    <div class="col-8">
+        <label for="comment">Commentary</label>
+        <textarea id="comment" name="comment" class="form-control"></textarea>
+    </div>
+</div>

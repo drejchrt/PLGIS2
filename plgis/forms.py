@@ -30,3 +30,21 @@ class TowerForm(ModelForm):
         model = Tower
         fields = '__all__'
 
+
+class FaultEditForm(forms.Form):
+    circuits = [(c.id,c.identifier) for c in Circuit.objects.all()]
+    components = forms.ChoiceField()
+    circuit = forms.ChoiceField()
+    section = forms.ChoiceField()
+    traverse = forms.ChoiceField()
+    side = forms.ChoiceField()
+
+    component = forms.ChoiceField()
+    type = forms.ChoiceField()
+    severity = forms.ChoiceField()
+    comment = forms.Textarea()
+
+
+class SpanFieldFaultEditForm(FaultEditForm):
+    bundle = forms.ChoiceField()
+    cables = forms.ChoiceField()

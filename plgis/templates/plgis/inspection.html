@@ -1,0 +1,632 @@
+{% extends 'plgis/base.html' %}
+{% load static %}
+{% load custom_tags %}
+
+{% block title %} PLGIS | Inspection {% endblock %}
+
+{% block additional_styles %}
+    <style>
+        #canvas {
+            padding: .5rem;
+            border-radius: .35rem;
+            height: 80vh;
+
+        }
+
+        #canvas svg {
+            width: 100%;
+            height: 100%;
+            border: 1px solid #e8e9ed;
+            border-radius: .35rem;
+        }
+
+
+        #tools {
+            height: 80vh;
+        }
+
+        .hover-panel {
+            display: flex;
+            width: 100%;
+            position: absolute;
+            bottom: .75rem;
+        }
+
+        .wide {
+            overflow-x: scroll;
+        }
+
+        .tab-content ul {
+            font-size: 0.75rem;
+            list-style: none;
+            width: 100%;
+            height: 100%;
+            padding: 0;
+        }
+
+        .tab-content ul li {
+            width: 100%;
+            height: 1.5rem;
+            transition-duration: .5s;
+            white-space: nowrap;
+        }
+
+        .wide.link ul li:hover {
+            background-color: #90acff;
+
+        }
+
+        .wide.link a {
+            text-decoration: none;
+        }
+
+    </style>
+
+    <link rel="stylesheet" href="{% static 'plgis/css/canvas.css' %}">
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.12.0/css/ol.css"
+          type="text/css">
+    <link rel="stylesheet"
+          href="{% static "plgis/css/map.css" %}"
+          type="text/css">
+    <style>
+        .map {
+            height: 75vh;
+            width: 100%;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.12.0/build/ol.js"></script>
+    {# I had to put it here, since this must be loaded before bootstrap and jquery #}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"></script>
+{% endblock %}
+
+
+{% block modals %}
+    <div class="modal fade" id="are-you-sure-modal" tabindex="-1" aria-labelledby="exampleModalLabel"
+         style="display: none;"
+         aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLabel">Inspect another image?</h5>
+                    <button class="close" type="button" data-dismiss="modal" aria-label="Close">
+                        <span>×</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    There are unsaved markings on this image.
+                    Do you really want to proceed to another image?
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" type="button" data-dismiss="modal">Cancel</button>
+                    <a id="confirm" class="btn btn-danger" href="">Discard Markings</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="new-mark-modal" tabindex="-1" role="dialog" data-backdrop="static"
+         data-keyboard="false">
+        <div class="modal-dialog modal-xl" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLabel">New Marking</h5>
+                    <button class="close" type="button" data-dismiss="modal" aria-label="Close">
+                        <span>×</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <ul class="nav nav-tabs" id="myTab" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <a class="nav-link active" id="modal-tab-old" data-toggle="tab" href="#old" role="tab"
+                               aria-controls="profile" aria-selected="false">Seen before</a>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <a class="nav-link" id="modal-tab-new" data-toggle="tab" href="#new" role="tab"
+                               aria-controls="home" aria-selected="true">Brand new</a>
+                        </li>
+                    </ul>
+                    <div class="tab-content" id="myTabContent">
+                        <div class="tab-pane fade show active" id="old" role="tabpanel">
+                            <div class="row mt-3">
+                                <div class="col-6">
+                                    <h6>Nearby faults:</h6>
+                                    <ul>
+                                        {% for f in nearby_faults %}
+                                            {% if image not in f.get_images %}
+                                                <li>
+                                                    <input name="mark_select" type="radio"
+                                                           value="{{ f.fault.id }}">
+                                                    <a href="{% url 'fault' fault_id=f.id %}"
+                                                       target="_blank">{{ f }}</a>
+                                                </li>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                                <div class="col-6">
+                                    <h6>Recently manipulated faults:</h6>
+                                    <ul>
+                                        {% for f in recent_faults %}
+                                            {% if image not in f.get_images %}
+                                                <li>
+                                                    <input name="mark_select" type="radio"
+                                                           value="{{ f.id }}">
+                                                    <a href="{% url 'fault' fault_id=f.id %}"
+                                                       target="_blank">{{ f }}</a>
+                                                </li>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="dropdown-divider"></div>
+                            <div class="row">
+                                <div class="col-12">
+                                    <h6>Other:</h6>
+                                    <div class="input-group">
+                                        <span class="d-block mt-2 mr-2">
+                                            <input name="mark_select" type="radio" value="other">
+                                        </span>
+                                        {# TODO: Fancier Dropdown with searching #}
+                                        <select id="all-marks-select" name="mark_option" class="form-control">
+                                            {% for f in circuit_faults %}
+                                                {% if image not in f.get_images %}
+                                                    <option data-href="{% url 'fault' fault_id=f.id %}"
+                                                            value="{{ f.id }}">{{ f }}</option>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </select>
+                                        <a id="option-opener" class="input-group-append btn btn-info" target="_blank">
+                                            <i class="fa fa-highlighter"></i> Open Selcted Fault
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="tab-pane fade" id="new" role="tabpanel">
+                            <form id="brand-new-marking-form">
+                                {% csrf_token %}
+                                <input type="hidden" id="image" value="{{ image.id }}">
+                                <input type="hidden" id="circuit" value="{{ circuit.id }}">
+                                <input type="hidden" id="section" value="{{ section }}">
+                                {% if section_type == 'tower' %}
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <label for="traverse">Traverse</label>
+                                            <select id="traverse" name="traverse" class="form-control">
+                                                {% for tn,t in macro.traverses.items %}
+                                                    <option value="{{ t.number }}">{{ t.number }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <div class="col-6">
+                                            {# TODO: Detect the side automatically #}
+                                            <label for="side">Side</label>
+                                            <select id="side" name="side" class="form-control">
+                                                <option value="L">Left</option>
+                                                <option value="M">Middle</option>
+                                                <option value="R">Right</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                {% else %}
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <label for="traverse">Traverse</label>
+                                            <select id="traverse" name="traverse" class="form-control">
+                                                {% for t in macro.0.get_traverses %}
+                                                    <option value="{{ t.number }}">{{ t.number }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <div class="col-6">
+                                            {# TODO: Detect the side automatically #}
+                                            <label for="side">Side</label>
+                                            <select id="side" name="side" class="form-control">
+                                                <option value="L">Left</option>
+                                                <option value="M">Middle</option>
+                                                <option value="R">Right</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <label for="bundle">Bundle</label>
+                                            <select id="bundle" name="bundle" class="form-control">
+                                                {% for b in macro.0.get_bundles %}
+                                                    <option data-traverse="{{ b.traverse }}"
+                                                            value="T{{ b.traverse }}_{{ b.side }}_{{ b.position }}">T{{ b.traverse }}_{{ b.side }}_{{ b.position }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <div class="col-6">
+                                            <label for="cable">Cable</label>
+                                            <select id="cable" name="cable" class="form-control">
+                                                <option value="1">1</option>
+                                                <option value="2">2</option>
+                                                <option value="3">3</option>
+                                                <option value="4">4</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                {% endif %}
+                                <div class="row">
+                                    <div class="col-8">
+                                        <label for="mark_component">Component:</label>
+                                        <select name="mark_component" id="mark_component" class="form-control">
+                                            {% for c in components %}
+                                                <option value="{{ c }}">{{ c }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="col-4">
+                                        <label for="new-mark-component">Add New Type:</label>
+                                        <div class="input-group">
+                                            <input id="new-mark-component" type="text" name="new_mark_component"
+                                                   class="form-control">
+                                            <button id="add-new-mark-component"
+                                                    class="btn btn-primary input-group-append"
+                                                    type="button">
+                                                <i class="fa fa-plus"></i> Add Component
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-8">
+                                        <label for="mark_type">Fault Type:</label>
+                                        <select name="mark_type" id="mark_type" class="form-control">
+                                            {% for mt in types %}
+                                                <option value="{{ mt }}">{{ mt }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="col-4">
+                                        <label for="new-mark-type">Add New Type:</label>
+                                        <div class="input-group">
+                                            <input id="new-mark-type" type="text" name="new_mark_type"
+                                                   class="form-control">
+                                            <button id="add-new-mark-type" class="btn btn-primary input-group-append"
+                                                    type="button">
+                                                <i class="fa fa-plus"></i> Add Type
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-6">
+                                        <label for="mark-severity-grade">Severity</label>
+                                        <select id="mark-severity-grade" class="form-control"
+                                                name="mark_severity_grade">
+                                            <option value="1"> 1 (Good to know)</option>
+                                            <option value="2"> 2 (Repair in next repair stage)</option>
+                                            <option value="3"> 3 (Immediate attention required)</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-6">
+                                        <label for="mark-comment">Commentary</label>
+                                        <textarea id="mark-comment" name="mark_comment" class="form-control"></textarea>
+
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" type="button" data-dismiss="modal">
+                        <i class="fa fa-ban"></i> Cancel
+                    </button>
+                    <button id="new-mark-modal-save" class="btn btn-success">
+                        <i class="fa fa-check"></i> Save
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+
+
+    <div class="row">
+        <div class="col-9 shadow">
+            <div class="row">
+                <div id="canvas" class="col-12">
+                    <svg>
+                        <image href="\{{ image.get_media_path }}"
+                               width="{{ images.get_dimensions.0 }}"
+                               height="{{ images.get_dimensions.1 }}"
+                               x="0"
+                               y="0"
+                               draggable="false"
+                               transform="translate(0,0)"/>
+                        {% for mark in marks %}
+                            {% if mark.image == image %}
+                                <polygon id="{{ mark.id }}" points="{{ mark.marking }}"/>
+                            {% endif %}
+                        {% endfor %}
+                    </svg>
+                </div>
+                <div class="hover-panel">
+                    <div class="btn btn-group btn-block">
+                        <a class="btn btn-primary"
+                           href="{% url 'inspection' circuit_id=image.circuit.id section_id=image.properties.section image_id=prev_image.id %}"
+                           data-toggle="tooltip" data-placement="top" title="Previous image">
+                            <i class="fa fa-arrow-left"></i>
+                        </a>
+
+                        <button id="marker-mode-button" class="btn btn-warning"
+                                data-toggle="tooltip" data-placement="top" title="Marker Mode">
+                            <i class="fa fa-highlighter"></i>
+                        </button>
+
+
+                        <button class="btn btn-success" id="submit-marks"
+                                data-toggle="tooltip" data-placement="top" title="Save Markings">
+                            <i class="fa fa-check"></i>
+                        </button>
+
+                        <button id="reset-view-button" class="btn btn-warning"
+                                data-toggle="tooltip" data-placement="top" title="Reset View">
+                            <i class="fa fa-redo"></i>
+                        </button>
+
+                        <a class="btn btn-primary"
+                           href="{% url 'inspection' circuit_id=image.circuit.id section_id=image.properties.section image_id=next_image.id %}"
+                           data-toggle="tooltip" data-placement="top" title="Next Image">
+                            <i class="fa fa-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="tools" class="col-3 shadow">
+            <div class="row">
+                <div class="col-12">
+                    <ul class="nav nav-tabs" id="myTab" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <a class="nav-link active" id="image-tab" data-toggle="tab" href="#image-tab-ct" role="tab"
+                               aria-controls="profile" aria-selected="false"><i class="fa fa-image"></i></a>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <a class="nav-link" id="images-tab" data-toggle="tab" href="#images" role="tab"
+                               aria-controls="home" aria-selected="true"><i class="fa fa-images"></i></a>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <a class="nav-link" id="marks-tab" data-toggle="tab" href="#marks" role="tab"
+                               aria-controls="contact" aria-selected="false"><i class="fa fa-highlighter"></i></a>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <a class="nav-link" id="map-tab" data-toggle="tab" href="#map-tab-ct" role="tab"
+                               aria-controls="contact" aria-selected="false"><i class="fa fa-map-marked"></i></a>
+                        </li>
+                    </ul>
+                    <div class="tab-content" id="myTabContent">
+                        <div class="tab-pane fade wide show active" id="image-tab-ct" role="tabpanel"
+                             aria-labelledby="image-tab">
+                            <h6>Image Properties</h6>
+                            <ul>
+                                <li>Name: {{ image.get_fname }}</li>
+                                <li>Circuit: {{ image.circuit }}</li>
+                                <li>Section: {{ image.properties.section }}</li>
+                                <li>Size: {{ image.get_size|temp_round:3 }} MB</li>
+                                <li>Dimensions: {{ image.get_dimensions }} px</li>
+                                <li>Date Taken: {{ image.date_taken }}</li>
+                                <li>Date Uploaded: {{ image.date_uploaded }}</li>
+                                <li>
+                                    Uploader:
+                                    <a href="{% url 'user' id=image.author.id %}">
+                                        {{ image.author }}
+                                    </a>
+                                </li>
+                                <li>Inspected: {{ image.inspected }}</li>
+                                {% if image.inspected %}
+                                    <li>Inspected By:
+                                        <a href="{% url 'user' id=image.inspector.id %}">
+                                            {{ image.inspector }}
+                                        </a>
+                                    </li>
+                                {% endif %}
+                                <li>Location on file system: {{ image.path }}</li>
+                            </ul>
+                        </div>
+                        <div class="tab-pane fade wide link" id="images" role="tabpanel" aria-labelledby="images-tab">
+                            <ul>
+                                {% for img in images %}
+                                    <a href="{{ img.get_inspection_path }}">
+                                        <li>{{ img.get_fname }}</li>
+                                    </a>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        <div class="tab-pane wide link fade" id="marks" role="tabpanel" aria-labelledby="contact-tab">
+                            <h6>Marks:</h6>
+                            <ul>
+                                {% for f in faults %}
+                                    <a href="{% url 'fault' fault_id=f.id %}">
+                                        <li>{{ f }}</li>
+                                    </a>
+                                {% endfor %}
+                            </ul>
+                            <div class="dropdown-divider"></div>
+                            <h6>New Marks</h6>
+                            <ul id="new-marks-list"></ul>
+                        </div>
+                        <div class="tab-pane fade" id="map-tab-ct" role="tabpanel" aria-labelledby="contact-tab">
+                            <div class="map" id="map">
+                            </div>
+                            <div id="popup" class="ol-popup">
+                                <a href="#" id="popup-closer" class="ol-popup-closer"></a>
+                                <div id="popup-content"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}
+
+{% block additional_scripts %}
+    <script>
+        // intialize tooltips
+        $(function () {
+            $('[data-toggle="tooltip"]').tooltip();
+        })
+    </script>
+    <script src="{% static 'plgis/js/inspection.js' %}"></script>
+    <script>
+        $('#submit-marks').click(function () {
+            var url = "{% url 'inspection' circuit_id=circuit.id section_id=section image_id=image.id %}"
+            var form = $(`<form method="post" action="${url}">{% csrf_token %}</form>`)
+            $(`<input type='hidden' name='markings' value='${JSON.stringify(markings)}'>`).appendTo(form)
+            $(`<input type='hidden' name='sightings' value='${JSON.stringify(sightings)}'>`).appendTo(form)
+            console.log(form)
+            form.appendTo($('body')).submit()
+        })
+
+        {% if section_type != 'tower' %}
+            // limit the bundle choice upon traverse selection
+            $('select#traverse').on('input',function(){
+                console.log('ere')
+                var val = $(this).val()
+                $('select#bundle').find('option').each(function(){
+                    if ($(this).attr('data-traverse') != val){
+                        $(this).attr('disabled',true)
+                    }
+                    else{
+                        $(this).attr('disabled',false)
+                    }
+                })
+            })
+
+            // limit cable choices upon bundle selection
+            $('select#bundle').on('input',function(){
+                var val = $(this).val()
+                var t,s,p;
+                [t,s,p] = val.split('_')
+                // TODO: Finish (preferably without AJAX call)
+            });
+        {% endif %}
+    </script>
+    <script type="text/javascript">
+        function put_new_markings_on_map() {
+            for (mark of markings) {
+                var coords = [{{ image.position.x }}, {{ image.position.y}}];
+                var popup = `${mark.component}-${mark.type}-[${mark.severity}];`
+                add_point_to_layer(new_mark_layer, coords, popup)
+            }
+        }
+
+        function add_point_to_layer(layer, coords, popup) {
+            var ft = new ol.Feature({
+                geometry: new ol.geom.Point(ol.proj.fromLonLat(coords)),
+                popup: popup
+            });
+            layer.getSource().addFeature(ft)
+        }
+
+        var styles = {
+            'tower': function (f) {
+                return [
+                    new ol.style.Style({
+                        image: new ol.style.RegularShape({
+                            fill: new ol.style.Fill({color: 'white'}),
+                            stroke: new ol.style.Stroke({color: 'black', width: 2}),
+                            points: 3,
+                            radius: 10,
+                            rotation: 0,
+                            angle: 0,
+                        }),
+                    })
+                ]
+            }
+        }
+
+        var map;
+        var old_mark_layer = new ol.layer.Vector({
+            source: new ol.source.Vector({
+                features: [
+                    {% for mark in marks %}
+                    {% endfor %}
+                ]
+            })
+        })
+        var new_mark_layer = new ol.layer.Vector({
+            source: new ol.source.Vector({
+                features: []
+            })
+        })
+
+
+        $(document).ready(function () {
+            map = new ol.Map({
+                target: 'map',
+                layers: [
+                    new ol.layer.Tile({
+                        source: new ol.source.OSM()
+                    }),
+                    new ol.layer.Vector({
+                        source: new ol.source.Vector({
+                            features: [
+                                {% for t in circuit.get_towers %}
+                                    new ol.Feature({
+                                        geometry: new ol.geom.Point(ol.proj.fromLonLat(
+                                            [{{ t.position.x  }}, {{ t.position.y }}])),
+                                        popup: '{{ t.identifier }}'
+                                    }),
+                                {% endfor %}
+                            ],
+                        }),
+                        style: styles['tower']
+                    }),
+                    old_mark_layer,
+                    new_mark_layer,
+                ],
+                view: new ol.View({
+                    center: ol.proj.fromLonLat([{{ image.position.x }}, {{ image.position.y }}]),
+                    zoom: 10
+                })
+            });
+
+            var container = document.getElementById('popup');
+            var content = document.getElementById('popup-content');
+            var closer = document.getElementById('popup-closer');
+
+            var overlay = new ol.Overlay({
+                element: container,
+                autoPan: true,
+                autoPanAnimation: {
+                    duration: 250
+                }
+            });
+            map.addOverlay(overlay);
+
+            closer.onclick = function () {
+                overlay.setPosition(undefined);
+                closer.blur();
+                return false;
+            };
+
+            map.on('singleclick', function (event) {
+                map.forEachFeatureAtPixel(event.pixel, function (f, l) {
+                    var coordinate = event.coordinate;
+                    content.innerHTML = f.get('popup');
+                    overlay.setPosition(coordinate);
+                })
+            });
+
+            {% for m in marks %}
+                add_point_to_layer(
+                    old_mark_layer,
+                    [{{ m.image.position.x }}, {{ m.image.position.y }}],
+                    '{{m.fault.component}}-{{m.fault.type}}-[{{m.fault.severity}}]'
+                )
+            {% endfor %}
+        });
+
+
+    </script>
+{% endblock %}

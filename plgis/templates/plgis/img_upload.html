@@ -1,0 +1,357 @@
+{% extends "plgis/base.html" %}
+
+{% block title %}PLGIS | Upload new Imagery {% endblock %}
+
+
+{% block additional_styles %}
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <style>
+        .dnd-file-box {
+            height: 20rem;
+            outline: 2px dashed #d6e1ff;
+            border-radius: .35rem;
+            padding: 100px 20px;
+            color: #7b95e2;
+            text-align: center;
+
+            transition-duration: .5s;
+        }
+
+        .dnd-file-box i {
+            font-size: 6rem;
+        }
+
+        .dnd-file-box input {
+            height: 0.1px;
+            opacity: 0;
+            overflow: hidden;
+            position: absolute;
+            z-index: -1;
+        }
+
+        .dnd-file-box label {
+            cursor: pointer;
+        }
+
+        .dnd-file-box label:hover {
+            color: #345bcb;
+        }
+
+        .dnd-file-box.is-dragover {
+            background-color: #d1d1d5;
+            outline-color: #ffffff;
+            border-color: #ffffff;
+            outline-offset: -10px;
+        }
+
+        textarea.coords-list {
+            height: 20rem;
+        }
+
+        .progress {
+            display: none;
+        }
+
+        div.alert i {
+            font-size: 5rem;
+        }
+
+        .alert {
+            max-height: 7rem;
+        }
+    </style>
+
+
+{% endblock %}
+
+
+{% block content %}
+    <div class="alert alert-dismissible alert-info fade overflow-auto" role="alert">
+        <div class="row">
+            <div class="col-1">
+                <i class="fa fa-info"></i>
+            </div>
+            <div class="col-10 alert-content">
+
+            </div>
+            <div class="col-1">
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="alert alert-dismissible alert-warning fade overflow-auto" role="alert">
+        <div class="row">
+            <div class="col-1">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div class="col-10 alert-content">
+
+            </div>
+            <div class="col-1">
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="alert alert-dismissible alert-danger fade overflow-auto" role="alert">
+        <div class="row">
+            <div class="col-1">
+                <i class="fas fa-times"></i>
+            </div>
+            <div class="col-10 alert-content">
+
+            </div>
+            <div class="col-1">
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-2"></div>
+        <div class="col-8">
+            <div class="card shadow mb-3">
+                <form id="upload-form" method="post" action="{% url 'img_upload' %}">
+                    {% csrf_token %}
+                    <div class="card-header">
+                        <h3>Upload Imagery</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <label for="circuit">Circuit</label>
+                                <select class="form-control" name="circuit" required>
+                                    {% for c in circuits %}
+                                        <option value="{{ c.id }}">{{ c.identifier }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-6">
+                                <label for="mast_coords_srid">EPSG:</label>
+                                <input class="form-control" name="coords_srid" type="number"
+                                       placeholder="4326">
+                            </div>
+                            <div class="col-6">
+                                <label for="mast_coords_separator">Separator:</label>
+                                <select class="form-control" name="coords_separator" required>
+                                    <option value=",">Comma (,)</option>
+                                    <option value=";">Semicolon (;)</option>
+                                    <option value="-">Dash (-)</option>
+                                    <option value=" ">Space ( )</option>
+                                    <option value="_">Underscore (_)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="dropdown-divider"></div>
+                        <div class="row mb-3">
+                            <div class="col-6">
+                                <span>Mast Pictures:</span>
+                                <div id="mast-pics-dnd" class="dnd-file-box mt-2">
+                                    <div class="label">
+                                        <input id="mast-pics" name="mast-pics" class="form-control" type="file"
+                                               data-multiple-caption="{count} files selected" multiple>
+                                        <label for="mast-pics">
+                                            <i class="fa fa-file-upload"></i><br>
+                                            <span id="mast-pics-dnd-text">
+                                                Choose Files or Drag <strong>Mast</strong> Pictures Here
+                                            </span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                            </div>
+                            <div class="col-6">
+                                <div class="row">
+                                    <div class="col-12">
+                                        <label for="mast_coords">Coordinate List:</label>
+                                        <textarea id="mast-coords-list" name="mast_coords"
+                                                  class="form-control coords-list"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="progress">
+                                    <div id="mast-upload-progress" class="progress-bar" style="width:80%">0%</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="dropdown-divider"></div>
+                        <div class="row mb-3">
+                            <div class="col-6">
+                                <span>Spanfield Pictures:</span>
+                                <div id="sf-pics-dnd" class="dnd-file-box mt-2">
+                                    <div class="label">
+                                        <input id="sf-pics" name="sf-pics" class="form-control" type="file"
+                                               data-multiple-caption="{count} files selected" multiple>
+                                        <label for="sf-pics">
+                                            <i class="fa fa-file-upload"></i><br>
+                                            <span id="sf-pics-dnd-text">
+                                                Choose Files or Drag <strong>Span Field</strong> Pictures Here
+                                            </span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="row">
+                                    <div class="col-12">
+                                        <label for="sf_coords">Coordinate List:</label>
+                                        <textarea id="sf-coords-list" name="sf_coords"
+                                                  class="form-control coords-list"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="progress">
+                                    <div id="sf-upload-progress" class="progress-bar" style="width:80%">0%</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer text-center">
+                        {% include 'plgis/buttons/form_reset_submit.html' %}
+                    </div>
+                </form>
+            </div>
+        </div>
+        <div class="col-4"></div>
+    </div>
+    <div class="row">
+        <div class="col-3"></div>
+        <div class="col-6"></div>
+        <div class="col-3"></div>
+    </div>
+{% endblock %}
+
+{% block additional_scripts %}
+    <script>
+        // Thanks Osvaldas Valutis
+        // https://tympanus.net/codrops/2015/09/15/styling-customizing-file-inputs-smart-way/
+        // https://css-tricks.com/drag-and-drop-file-uploading/
+
+        $(document).ready(function () {
+            var droppedFiles = false;
+
+            // set the behaviour of the drag n drop boxes
+            $(".dnd-file-box").on('drag dragstart dragend dragover dragenter dragleave drop', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            })
+                .on('dragover dragenter', function () {
+                    $(this).addClass('is-dragover');
+                })
+                .on('dragleave dragend drop', function () {
+                    $(this).removeClass('is-dragover');
+                })
+                .on('drop', function (e) {
+                    droppedFiles = e.originalEvent.dataTransfer.files; // the files that were dropped
+                    var input = $(this).find('input[type="file"]');
+                    var label = $(this).find('span');
+                    showFiles(input, label, droppedFiles);
+                    input.trigger('input');
+                });
+
+            // handle input events on the hidden input[type="file"] elements
+            $('.dnd-file-box input[type="file"]').on('input', function (e) {
+                // Thanks Anshu Pal
+                // https://anshu-dev.medium.com/file-upload-progress-bar-using-django-and-ajax-ba4eb7482d9c
+
+
+                console.log($("form#upload-form").get(0))
+                var fdata = new FormData($("form#upload-form").get(0));
+                fdata.append('command', 'pics_upload')
+
+                var progressBar = $(this).attr("id").includes('mast') ? $("#mast-upload-progress") : $("#sf-upload-progress");
+                progressBar.parent().css('display', 'flex');
+
+
+                $.ajax({
+                    type: 'post',
+                    url: '{% url 'img_upload' %}',
+                    data: fdata,
+                    dataType: 'json',
+                    beforeSend: function () {
+
+                    },
+                    headers: {
+                        "X-CSRFToken": $('meta[name="csrf-token"]').attr('content')
+                    },
+                    xhr: function () {
+                        var xhr = new window.XMLHttpRequest();
+                        xhr.upload.addEventListener('progress', function (e) {
+                            if (e.lengthComputable) {
+                                console.log(e.loaded, e.total);
+                                var prog = (e.loaded / e.total) * 100;
+                                progressBar.css('width', prog + "%").text(parseInt(prog) + "%");
+                            }
+                        })
+                        return xhr;
+                    },
+                    success: function (response) {
+                        // display messages
+                        if (response['info'].length > 0) {
+                            array_to_ul(response['info']).appendTo($("div.alert-info .alert-content"));
+                            $('.alert-info').removeClass('fade');
+                        }
+                        if (response['warn'].length > 0) {
+                            array_to_ul(response['warn']).appendTo($("div.alert-warning .alert-content"));
+                            $('.alert-warning').removeClass('fade');
+                        }
+
+                        if (response['error'].length > 0) {
+                            array_to_ul(response['error']).appendTo($("div.alert-error .alert-content"));
+                            $('.alert-danger').removeClass('fade');
+                        }
+
+                        // display coordinates
+                        $('#mast-coords-list').val(response['exif_coords']['tower'].join(''))
+                        $('#sf-coords-list').val(response['exif_coords']['span_field'].join(''))
+
+                        // TODO: replace the dnd box with a map and/or list of uplaoded files with and check mark
+                    },
+                    error: function (error) {
+                        console.log('xhr fail')
+                        console.log(error)
+                    },
+                    processData: false,
+                    contentType: false,
+                });
+            });
+
+            // change the text on the labels of the dnd box, so that it shows how many files got selected
+            var showFiles = function (input, label, files) {
+                label.text(files.length > 1 ? (input.attr('data-multiple-caption') || '').replace('{count}', files.length) : files[0].name);
+            };
+
+            // on change event handler (change the label text when using the click option)
+            $('.dnd-file-box input[type="file"]').on('change', function (e) {
+                showFiles($(this), $(this).parent().find('span'), e.target.files);
+            });
+
+            $('form#upload-form').on('submit', function (e) {
+                // remove these inputs, as the pictures were already uploaded via AJAX before
+                $(this).children('#mast-pics').remove();
+                $(this).children('#sf-pics').remove();
+            });
+        });
+
+        function array_to_ul(arr) {
+            var ul = $('<ul></ul>')
+            for (var e of arr) {
+                $(`<li>${e}</li>`).appendTo(ul)
+            }
+            return ul
+        }
+    </script>
+{% endblock %}

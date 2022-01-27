@@ -25,78 +25,79 @@
     <hr class="sidebar-divider">
 
     <!-- Heading -->
-    {% if request.user|has_group:"managers" %}
-        <div class="sidebar-heading">
-            Componets Management
-        </div>
+    <div class="sidebar-heading">
+        Components
+    </div>
 
-        <li class="nav-item">
-            <a class="nav-link" href="{% url 'circuits' %}">
-                <i class="fa fa-circle-notch"></i>
-                <span>Circuits</span></a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" href="{% url 'towers' %}">
-                <i class="fa fa-broadcast-tower"></i>
-                <span>Towers</span></a>
-        </li>
-        <!-- Divider -->
-        <hr class="sidebar-divider">
-
+    <li class="nav-item">
+        <a class="nav-link" href="{% url 'circuits' %}">
+            <i class="fa fa-circle-notch"></i>
+            <span>Circuits</span></a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="{% url 'towers' %}">
+            <i class="fa fa-broadcast-tower"></i>
+            <span>Towers</span></a>
+    </li>
+    <!-- Divider -->
+    <hr class="sidebar-divider">
+    {% if user|has_group:"manager" %}
         <li class="nav-item">
             <a class="nav-link" href="{% url 'constructor' %}">
                 <i class="fa fa-magic"></i>
                 <span>Circuit Constructor</span></a>
         </li>
-
         <!-- Divider -->
         <hr class="sidebar-divider">
 
     {% endif %}
 
-    {% if request.user|has_group:"inspectors" %}
+    {% if user|has_group:"inspectors" %}
         <div class="sidebar-heading">
-            Componets Management
+            Inspection
         </div>
 
         <li class="nav-item">
-            <a class="nav-link" href="{% url 'circuits' %}">
-                <i class="fa fa-circle-notch"></i>
-                <span>Circuits</span></a>
+            <a class="nav-link" href="{% url 'img_upload' %}">
+                <i class="fa fa-upload"></i>
+                <span>Upload images</span>
+            </a>
         </li>
         <li class="nav-item">
-            <a class="nav-link" href="{% url 'towers' %}">
-                <i class="fa fa-broadcast-tower"></i>
-                <span>Towers</span></a>
+            <a class="nav-link" href="{% url 'img_list' %}">
+                <i class="fa fa-images"></i>
+                <span>Browse images</span>
+            </a>
         </li>
-        <!-- Divider -->
+         <li class="nav-item">
+            <a class="nav-link" href="{% url 'inspection' %}">
+                <i class="fa fa-highlighter"></i>
+                <span>Browse Faults</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'inspection' %}">
+                <i class="fa fa-search"></i>
+                <span>Inspect</span>
+            </a>
+        </li>
+
         <hr class="sidebar-divider">
-
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'inspection' %}">
+                <i class="fa fa-file-export"></i>
+                <span>Export</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'inspection' %}">
+                <i class="fa fa-chart-bar"></i>
+                <span>Stats</span>
+            </a>
+        </li>
     {% endif %}
+
     <!-- Nav Item - Pages Collapse Menu -->
-
-
-    <!-- Heading -->
-    <div class="sidebar-heading">
-        Tickets
-    </div>
-
-    <li class="nav-item">
-        <a class="nav-link" href="tables.html">
-            <i class="fa fa-magic"></i>
-            <span>Urgent</span></a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link" href="tables.html">
-            <i class="fa fa-magic"></i>
-            <span>Active</span></a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link" href="tables.html">
-            <i class="fa fa-magic"></i>
-            <span>Issued</span></a>
-    </li>
-
 
 
     <!-- Sidebar Toggler (Sidebar) -->

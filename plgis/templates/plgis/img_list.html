@@ -1,0 +1,119 @@
+{% extends 'plgis/base.html' %}
+{% load static %}
+{% load custom_tags %}
+
+
+{% block title %}PLGIS | Browse Imagery {% endblock %}
+
+{% block additional_styles %}
+    <link href="{% static 'sb-admin-2/vendor/datatables/dataTables.bootstrap4.min.css' %}" rel="stylesheet">
+
+    <style>
+        .carousel {
+            background: rgb(34, 74, 190);
+            background: radial-gradient(circle, rgba(34, 74, 190, 1) 20%, rgba(78, 115, 223, 1) 50%);
+            text-align: center;
+            border-radius: .35rem;
+        }
+
+        .carousel img {
+            margin: 0 auto;
+            max-height: 50vh;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div id="carouselExampleIndicators" class="carousel slide" data-ride="carousel" data-interval="false">
+                <ol class="carousel-indicators">
+                    {% for i in images %}
+                        <li data-target="#carouselExampleIndicators" data-slide-to="{{ forloop.counter0 }}"
+                                {% if forloop.counter0 == 0 %} class="active" {% endif %}></li>
+                    {% endfor %}
+                </ol>
+                <div class="carousel-inner">
+                    {% for i in images %}
+                        <div class="carousel-item {% if forloop.counter0 == 0 %}active{% endif %}">
+                            <img class="d-block" src="{{ i.get_media_path }}">
+                            <div class="carousel-caption d-none d-md-block">
+                                <h5>{{ i.get_fname }}</h5>
+                                <p>{{ i.circuit.id }}</p>
+                                <p>{{ i.properties.type }}</p>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+                <a class="carousel-control-prev" href="#carouselExampleIndicators" role="button" data-slide="prev">
+                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                    <span class="sr-only">Previous</span>
+                </a>
+                <a class="carousel-control-next" href="#carouselExampleIndicators" role="button" data-slide="next">
+                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                    <span class="sr-only">Next</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header">
+                    <h5 class="text-primary">List of all pictures</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                            <thead>
+                            <tr>
+                                <th>Filename</th>
+                                <th>Circuit</th>
+                                <th>Section</th>
+                                <th>Dimensions [px]</th>
+                                <th>Date Taken</th>
+                                <th>Inspected</th>
+                                <th>Inspected By</th>
+                                <th>Uploaded By</th>
+                                <th>Size [MB ]</th>
+                                <th>Position</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for i in images %}
+                                {# TODO insert links and other computed stats, such as number of marks etc. #}
+                                <tr class="link">
+                                    <td>{{ i.get_fname }}</td>
+                                    <td>{{ i.circuit.identifier }}</td>
+                                    <td>{{ i.properties.section }}</td>
+                                    <td>{{ i.get_dimensions }}</td>
+                                    <td>{{ i.date_taken }}</td>
+                                    <td>{{ i.inspected }}</td>
+                                    <td>{{ i.inspector }}</td>
+                                    <td>{{ i.author }}</td>
+                                    <td>{{ i.get_size|temp_round:3 }}</td>
+                                    <td>{{ i.position }}</td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card-footer"></div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block additional_scripts %}
+    <!-- Page level plugins -->
+    <script src="{% static 'sb-admin-2/vendor/datatables/jquery.dataTables.min.js' %}"></script>
+    <script src="{% static 'sb-admin-2/vendor/datatables/dataTables.bootstrap4.min.js' %}"></script>
+
+    <script>
+        $(document).ready(function () {
+            $('#dataTable').DataTable();
+        });
+    </script>
+{% endblock %}

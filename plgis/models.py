@@ -1,170 +1,22 @@
+import os
+from operator import itemgetter
+
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.contrib.gis.db import models
+from django.contrib.gis.geos import LineString, MultiPoint
 from django.contrib.postgres.fields import ArrayField
 from django.db.models import JSONField
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from django.urls import reverse
 
+from plgis.misc.tools import fkin_move_file, get_date_taken_from_exif
+
+import PIL
+
 
 # Create your models here.
-class Dictionary(models.Model):
-    """A model that represents a dictionary. This model implements most of the dictionary interface,
-    allowing it to be used like a python dictionary.
-
-    """
-    name = models.CharField(max_length=255)
-
-    @staticmethod
-    def getDict(name):
-        """Get the Dictionary of the given name.
-
-        """
-        df = Dictionary.objects.select_related().get(name=name)
-
-        return df
-
-    def __getitem__(self, key):
-        """Returns the value of the selected key.
-
-        """
-        return self.keyvaluepair_set.get(key=key).value
-
-    def __setitem__(self, key, value):
-        """Sets the value of the given key in the Dictionary.
-
-        """
-        try:
-            kvp = self.keyvaluepair_set.get(key=key)
-
-        except KVP.DoesNotExist:
-            KVP.objects.create(container=self, key=key, value=value)
-
-        else:
-            kvp.value = value
-            kvp.save()
-
-    def __delitem__(self, key):
-        """Removed the given key from the Dictionary.
-
-        """
-        try:
-            kvp = self.keyvaluepair_set.get(key=key)
-
-        except KVP.DoesNotExist:
-            raise KeyError
-
-        else:
-            kvp.delete()
-
-    def __len__(self):
-        """Returns the length of this Dictionary.
-
-        """
-        return self.keyvaluepair_set.count()
-
-    def iterkeys(self):
-        """Returns an iterator for the keys of this Dictionary.
-
-        """
-        return iter(kvp.key for kvp in self.keyvaluepair_set.all())
-
-    def itervalues(self):
-        """Returns an iterator for the keys of this Dictionary.
-
-        """
-        return iter(kvp.value for kvp in self.keyvaluepair_set.all())
-
-    __iter__ = iterkeys
-
-    def iteritems(self):
-        """Returns an iterator over the tuples of this Dictionary.
-
-        """
-        return iter((kvp.key, kvp.value) for kvp in self.keyvaluepair_set.all())
-
-    def keys(self):
-        """Returns all keys in this Dictionary as a list.
-
-        """
-        return [kvp.key for kvp in self.keyvaluepair_set.all()]
-
-    def values(self):
-        """Returns all values in this Dictionary as a list.
-
-        """
-        return [kvp.value for kvp in self.keyvaluepair_set.all()]
-
-    def items(self):
-        """Get a list of tuples of key, value for the items in this Dictionary.
-        This is modeled after dict.items().
-
-        """
-        return [(kvp.key, kvp.value) for kvp in self.keyvaluepair_set.all()]
-
-    def get(self, key, default=None):
-        """Gets the given key from the Dictionary. If the key does not exist, it
-        returns default.
-
-        """
-        try:
-            return self[key]
-
-        except KeyError:
-            return default
-
-    def has_key(self, key):
-        """Returns true if the Dictionary has the given key, false if not.
-
-        """
-        return self.contains(key)
-
-    def contains(self, key):
-        """Returns true if the Dictionary has the given key, false if not.
-
-        """
-        try:
-            self.keyvaluepair_set.get(key=key)
-            return True
-
-        except KVP.DoesNotExist:
-            return False
-
-    def clear(self):
-        """Deletes all keys in the Dictionary.
-
-        """
-        self.keyvaluepair_set.all().delete()
-
-    def __unicode__(self):
-        """Returns a unicode representation of the Dictionary.
-
-        """
-        return str(self.asPyDict())
-        # return unicode(self.asPyDict()) #For the record: This method was edited. Changed it so it would let
-        # the program execute, dunno if it really does what it's supposed to do. Some legacy issues probably.
-
-    def asPyDict(self):
-        """Get a python dictionary that represents this Dictionary object.
-        This object is read-only.
-
-        """
-        fieldDict = dict()
-
-        for kvp in self.keyvaluepair_set.all():
-            fieldDict[kvp.key] = kvp.value
-
-        return fieldDict
-
-
-class KVP(models.Model):
-    """A Key-Value pair with a pointer to the Dictionary that owns it.
-
-    """
-    container = models.ForeignKey(Dictionary, on_delete=models.CASCADE, db_index=True)
-    key = models.CharField(max_length=240, db_index=True)
-    value = models.CharField(max_length=240, db_index=True)
-
 
 # Macro Components
 
@@ -174,7 +26,6 @@ class Circuit(models.Model):
     substation_start = models.CharField(max_length=255, blank=True)
     substation_end = models.CharField(max_length=255, blank=True)
     date_added = models.DateTimeField(auto_now_add=True)
-
 
     FIELDS = {
         'ID': identifier,
@@ -187,11 +38,81 @@ class Circuit(models.Model):
     def get_absolute_url(self):
         return reverse('circuit', kwargs={'id': self.pk})
 
+    ## This method feels wierd...
+    @classmethod
+    def get_user_related_objects(cls, user):
+        return user.profile.circuits.all()
+
+    def get_towers(self):
+        return Tower.objects.filter(circuit=self)
+
+    def get_span_fields(self,return_towers=True):
+        towers = self.get_towers()
+        if return_towers:
+            return [[towers[i], towers[i + 1]]  for i in range(len(towers) - 1)]
+        else:
+            return [f'SF-{towers[i].number}_{towers[i + 1].number}' for i in range(len(towers) - 1)]
+
+    def component_tree(self):
+        return {t.identifier:t for t in self.get_towers()}
+
+    def get_nearest_tower(self, point, max_valid_dist=0):
+        '''
+        Returns a tower of the circuit, that is the nearest to specified point
+        One can also specify maximal valid distance, e.g. if the the nearest tower
+        is further than 50 meters, it is not likely, that the point has a relation to
+        the point. However this feature is off per default (max_valid_dist=0)
+        :param point: <GEOSGeometry.Point> Point for which the nearest tower is searched
+        :param max_valid_dist: <float> Maximal allowed distance from any tower
+        :return: <plgis.models.Tower/None> Instance of Tower model closest to the point or None
+        '''
+
+        # Since there is usually less than 1000 Towers in a Circiut, so it does not make sense
+        # to build a k-d tree or something in order to find the neighbours quicker. Let's just
+        # find the minimum distance by comparing distances to all towers.
+
+        towers = self.get_towers()
+        tmin = None
+        dmin = float('inf')
+        for t in towers:
+            d = t.position.distance(point)
+            if d < dmin:
+                tmin = t
+                dmin = d
+        return tmin
+
+    def get_nearest_span_field(self, point, max_valid_dist=0):
+        # create spanfield geometries
+        towers = self.get_towers()
+        sfs = [{
+            'name': f'SF-{towers[i].number}_{towers[i + 1].number}',
+            'geom': LineString(towers[i].position, towers[i + 1].position)
+        } for i in range(len(towers) - 1)]
+        dmin = float('inf')
+        sfmin = None
+        for sf in sfs:
+            d = point.distance(sf['geom'])
+            if d < dmin:
+                dmin = d
+                sfmin = sf
+        return sfmin
+
+    def get_faults(self):
+        return Fault.objects.filter(address__circuit=str(self.id))
+
+    def get_components(self):
+        return set([f.component for f in Fault.objects.filter(address__circuit=str(self.id))])
+
+    def get_types(self):
+        return set([f.type for f in Fault.objects.filter(address__circuit=str(self.id))])
+
+
     def __repr__(self):
         return self.identifier
 
     def __str__(self):
         return self.__repr__()
+
 
 class Tower(models.Model):
     identifier = models.CharField(max_length=255)
@@ -200,7 +121,6 @@ class Tower(models.Model):
     components = ArrayField(models.CharField(max_length=255), default=list)
     position = models.PointField()
     traverses = JSONField(default=dict)
-
 
     FIELDS = {
         'ID': identifier,
@@ -211,6 +131,215 @@ class Tower(models.Model):
     }
 
     def get_absolute_url(self):
-        return reverse('tower',kwargs={'id':self.pk})
+        return reverse('tower', kwargs={'id': self.pk})
+
+    ## TODO: Make sure it works
+    @classmethod
+    def get_user_related_objects(cls, user):
+        circuits = user.profile.circuits.all()
+        return cls.objects.filter(circuit__in=circuits)
+
+    @property
+    def number(self):
+        return "".join([c for c in self.identifier if c.isdigit()])
+
+    def get_traverses(self):
+        return [t for _,t in self.traverses.items()]
+
+    def get_bundles(self):
+        bundles = []
+        tb = [(t['number'],t['bundles']) for t in self.get_traverses()]
+        for tn,t in tb:
+            b_names = t.keys()
+            for bn in b_names:
+                t[bn]['traverse'] = tn
+                bundles.append(t[bn])
+
+        return bundles
 
 
+class Profile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    organisation = models.CharField(max_length=255)
+    position = models.CharField(max_length=255)
+    tel = models.CharField(max_length=50)
+    picture = models.ImageField(upload_to='profile_pics')
+
+    circuits = models.ManyToManyField(Circuit)
+
+
+@receiver(post_save, sender=User)
+def create_or_update_user_profile(sender, instance, created, **kwargs):
+    if created:
+        Profile.objects.create(user=instance)
+    instance.profile.save()
+
+
+class Image(models.Model):
+    path = models.FilePathField(path=settings.MEDIA_ROOT, max_length=255)
+    circuit = models.ForeignKey(Circuit, on_delete=models.SET_NULL, null=True)
+    properties = models.JSONField(default=dict)
+    position = models.PointField(null=True, dim=3)
+    inspected = models.BooleanField(default=False)
+    inspector = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='inspecotr')
+    author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='author')
+    date_uploaded = models.DateTimeField(auto_now_add=True)
+
+    # TODO: Store some of these values into table?
+    def get_size(self):
+        # Size in MB
+        return os.stat(self.path).st_size / 1000000.0
+
+    def get_dimensions(self):
+        with PIL.Image.open(self.path) as img:
+            return img.size
+
+    def get_date_taken(self):
+        return get_date_taken_from_exif(self.path)
+
+    def get_fname(self):
+        return os.path.basename(self.path)
+
+    def get_path_from_properties(self):
+        if self.properties['type'] == 'tower':
+            tdir = 'towers'
+        else:
+            tdir = 'span_fields'
+        return os.path.join(
+            settings.MEDIA_ROOT,
+            'imagery',
+            'circuits',
+            f'{self.circuit.id}_{self.circuit.identifier}',
+            tdir,
+            self.properties['section'],
+            self.get_fname()
+        )
+
+    def get_media_path(self):
+        nodes = self.path.split(os.sep)
+        media = nodes.index('media')
+        return os.sep.join(nodes[media:])
+
+    def get_inspection_path(self):
+        kw = {
+            'circuit_id': self.circuit.id,
+            'section_id': self.properties['section'],
+            'image_id': self.id
+        }
+        return reverse('inspection', kwargs=kw)
+
+    @classmethod
+    def get_working_directory_imagery(cls):
+        return Image.objects.filter(path__contains='wd')
+
+    @classmethod
+    def get_section_imagery(cls, circuit, section):
+        cfilt = cls.objects.filter(circuit=circuit)
+        return cfilt.filter(properties__section=section)
+
+    def move(self, dest):
+        fkin_move_file(self.path, dest)
+        self.path = dest
+        # self.save() ## TODO: Probably not the best idea... Gotta think about it
+
+    def get_faults(self):
+        '''
+        Gets Faults that are marked on this image
+        :return:
+        '''
+        return [m.fault for m in Marking.objects.filter(image__id=self.id)]
+
+    def get_nearby_faults(self, k=10):
+        '''
+        Gets nearby faults within circuit
+        :return: Collection of plgis.models.Fault
+        '''
+        faults = {f.id: f.get_position().distance(self.position) for f in
+                  Fault.objects.filter(address__circuit=str(self.circuit.id))}
+        k_nearest = dict(sorted(faults.items(), key=itemgetter(1))[:k])
+        return Fault.objects.filter(id__in=list(k_nearest.keys()))
+
+
+@receiver(post_delete, sender=Image)  # TODO: Make it work
+def delete_image_from_fs(sender, instance, created, **kwargs):
+    print('delete')
+    print(80 * '*')
+    os.remove(instance.path)
+
+
+class Fault(models.Model):
+    address = JSONField(default=dict)
+    component = models.CharField(max_length=255)
+    type = models.CharField(max_length=255)
+    severity = models.IntegerField()
+    comment = models.TextField()
+    author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    date_added = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f'{self.component}-{self.type}-[{self.severity}]'
+
+    def get_position(self):
+        '''
+        Since the fault does not have any coordinates associated with it,
+        we gotta rely on the marking, which get coordinates through the image
+        position. However the fault could be marked on several images,
+        so this function takes a centroid of the associated images
+        '''
+        img_pos = [m.image.position for m in Marking.objects.filter(fault__id=self.id)]
+        return MultiPoint(img_pos).centroid
+
+    @staticmethod
+    def get_recent_faults(circuit_id=None, k=10):
+        # convert to set to remove duplicate values. (several marking point to the same fault)
+        if circuit_id:
+            return set([
+                m.fault for m in Marking.objects
+                .filter(fault__address__circuit=str(circuit_id))
+                .order_by('-date_updated')
+                ][:k])
+        else:
+            return set([
+                m.fault for m in Marking.objects.all()
+                .order_by('-date_updated')
+                ][:k])
+
+    def get_images(self):
+        return [m.image for m in Marking.objects.filter(fault=self)]
+
+    def get_marks(self):
+        return Marking.objects.filter(fault=self)
+
+    def get_macro_type(self):
+        if 'bundle' in self.address:
+            return 'Span Field'
+        else:
+            return 'Tower'
+
+class Marking(models.Model):
+    image = models.ForeignKey(Image, on_delete=models.CASCADE)
+    fault = models.ForeignKey(Fault, on_delete=models.CASCADE)
+    marking = models.CharField(max_length=100)
+
+    date_added = models.DateTimeField(auto_now_add=True)
+    date_updated = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f'{self.fault}@{self.image.get_fname()}'
+
+    @staticmethod
+    def get_marks_in_circuit(circuit_id):
+        return Marking.objects.filter(fault__address__circuit=circuit_id)
+
+    @staticmethod
+    def get_nearby_marks(pos, k=10):
+        imgs = {m.id: m.image.position.distance(pos) for m in Marking.objects.all()}
+        k_nearest = dict(sorted(imgs.items(), key=itemgetter(1))[:k])
+        return Marking.objects.filter(id__in=list(k_nearest.keys()))
+
+    @staticmethod
+    def get_recent_marks(circuit_id=None):
+        if circuit_id:
+            return Marking.objects.filter(fault__address__circuit=circuit_id).order_by('-date_updated')
+        else:
+            return Marking.objects.all().order_by('-date_updated')

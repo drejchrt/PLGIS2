@@ -1,0 +1,40 @@
+{% extends "plgis/base.html" %}
+{% load static %}
+
+{% block title %}PLGIS | {{ usr.first_name }} {{ usr.last_name|upper }} {% endblock %}
+{% block additional_styles %}
+    <style>
+    .profile-pic{
+        height:200px;
+        border-radius: 2rem;
+    }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-3"></div>
+    <div class="col-6">
+        <div class="card shadow">
+            <div class="card-header text-center">
+                <img class="profile-pic" src="{{ usr.profile.picture.url }}">
+            </div>
+            <div class="card-body text-center">
+                <h1 class="text-primary">{{ usr.first_name }} {{ usr.last_name|upper }}</h1>
+                <div class="row mb-3"></div>
+                <div class="font-weight-light">{{ usr.profile.position }}</div>
+                at
+                <div class="font-weight-bold ">{{ usr.profile.organisation }}</div>
+                <div class="row mb-3"></div>
+                <h5 class="font-weight-lighter">
+                    <i class="fa fa-envelope mr-2"></i> {{ usr.email }}
+                </h5>
+                <h5 class="font-weight-lighter">
+                    <i class="fa fa-phone mr-2"></i> {{ usr.profile.tel }}
+                </h5>
+            </div>
+        </div>
+    </div>
+    <div class="col-3"></div>
+</div>
+{% endblock %}

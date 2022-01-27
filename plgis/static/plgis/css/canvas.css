@@ -1,0 +1,16 @@
+#canvas svg polygon{
+    fill:none;
+    stroke: red;
+    stroke-width:3px;
+    transition-duration: .25s;
+}
+
+#canvas svg polygon:hover{
+    fill:none;
+    stroke: orange;
+    stroke-width:3px;
+}
+
+#canvas svg polygon.selected {
+    stroke:yellow;
+}
