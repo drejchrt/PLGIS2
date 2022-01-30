@@ -234,14 +234,54 @@ def img_upload(request):
 
 
 @login_required
-def img_list(request):
-    t = loader.get_template("plgis/img_list.html")
-    circuits = Circuit.get_user_related_objects(request.user)
-    images = Image.objects.filter(circuit__in=[c.id for c in circuits])
-    context = {
-        'images': images
-    }
-    return HttpResponse(t.render(context, request))
+def image(request, circuit_id=None, section_id=None, image_id=None):
+    if circuit_id:
+        circuit = Circuit.objects.get(pk=circuit_id)
+        if section_id:
+            images = Image.objects.filter(circuit=circuit).filter(properties__section=section_id)
+            if image_id:
+                img = Image.objects.get(pk=image_id)
+                marks = Marking.objects.filter(image=img)
+                faults = [m.fault for m in marks]
+                t = loader.get_template("plgis/image.html")
+                context = {
+                    'circuit':circuit,
+                    'image': img,
+                    'marks': marks,
+                    'faults': faults
+
+                }
+                return HttpResponse(t.render(context, request))
+            else:
+                t = loader.get_template('plgis/list_images.html')
+                context = {
+                    'images': images
+                }
+                return HttpResponse(t.render(context, request))
+
+            return HttpResponse(t.render(context, request))
+        else:
+            towers = circuit.get_towers()
+            span_fields = [f'SF-{towers[i].number}_{towers[i + 1].number}' for i in range(len(towers) - 1)]
+            t = loader.get_template("plgis/select_section.html")
+            context = {
+                'circuit': circuit,
+                'towers': towers,
+                'span_fields': span_fields,
+                'view': 'image',
+                'images': Image.objects.filter(circuit=circuit)
+            }
+            return HttpResponse(t.render(context, request))
+    else:
+        t = loader.get_template('plgis/select_circuit.html')
+        circuits = Circuit.get_user_related_objects(request.user)
+        images = Image.objects.filter(circuit__in=circuits)
+        context = {
+            'circuits': Circuit.get_user_related_objects(request.user),
+            'view': 'image',
+            'images': images
+        }
+        return HttpResponse(t.render(context, request))
 
 
 @login_required
@@ -329,17 +369,20 @@ def inspection(request, circuit_id=None, section_id=None, image_id=None):
         else:
             towers = circuit.get_towers()
             span_fields = [f'SF-{towers[i].number}_{towers[i + 1].number}' for i in range(len(towers) - 1)]
-            t = loader.get_template("plgis/inspection_select_section.html")
+            t = loader.get_template("plgis/select_section.html")
             context = {
                 'circuit': circuit,
                 'towers': towers,
                 'span_fields': span_fields,
+                'view': 'inspection',
             }
             return HttpResponse(t.render(context, request))
+
     else:
-        t = loader.get_template('plgis/inspection_select_circuit.html')
+        t = loader.get_template('plgis/select_circuit.html')
         context = {
-            'circuits': Circuit.get_user_related_objects(request.user)
+            'circuits': Circuit.get_user_related_objects(request.user),
+            'view': 'inspection',
         }
         return HttpResponse(t.render(context, request))
 
@@ -350,60 +393,106 @@ def marking(request, mark_id):
 
 
 @login_required
-def fault(request, fault_id):
-    if request.method == 'POST':
-        if request.is_ajax():
-            data = request.POST
-            response = {}
-            if 'circuit' in data:
-                circuit = Circuit.objects.get(pk=data['circuit'])
-                c = circuit.component_tree()
-                if 'section_type' in data:
-                    st = data['section_type']
-                    if 'section' in data:
-                        s = data['section']
-                        if 'traverse' in data:
-                            t = data['traverse']
-                            if 'side' in data:
-                                sd = data['side']
-                                if 'bundle' in data:
-                                    b = data['bundle']
-                                    if 'cable' in data:
-                                        cb = data['cable']
+def fault(request, circuit_id=None, section_id=None, fault_id=None):
+    if circuit_id:
+        circuit = Circuit.get_user_related_objects(request.user).get(pk=circuit_id)
+        if section_id:
+            faults = circuit.get_faults()
+            if fault_id:
+                if request.method == 'POST':
+                    if request.is_ajax():
+                        data = request.POST
+                        response = {}
+                        if 'circuit' in data:
+                            circuit = Circuit.objects.get(pk=data['circuit'])
+                            c = circuit.component_tree()
+                            if 'section_type' in data:
+                                st = data['section_type']
+                                if 'section' in data:
+                                    s = data['section']
+                                    if 'traverse' in data:
+                                        t = data['traverse']
+                                        if 'side' in data:
+                                            sd = data['side']
+                                            if 'bundle' in data:
+                                                b = data['bundle']
+                                                if 'cable' in data:
+                                                    cb = data['cable']
+                                                else:
+                                                    response['cable'] = [i + 1 for i in range(
+                                                        int(c[s].traverses[t]['bundles'][b]['cables']['count']))]
+                                            else:
+                                                response['bundle'] = to_list(c[s].traverses[t]['bundles'].keys())
+                                        else:
+                                            response['side'] = ['L', 'M', 'R']
                                     else:
-                                        response['cable'] = [i + 1 for i in range(int(c[s].traverses[t]['bundles'][b]['cables']['count']))]
+                                        response['traverse'] = to_list(c[s].traverses.keys())
                                 else:
-                                    response['bundle'] = to_list(c[s].traverses[t]['bundles'].keys())
+                                    # cause I got enough memory...
+                                    response['section'] = [(c, c) for c in c.keys()] \
+                                        if st == 'tower' else \
+                                        [(t[0].identifier, f'SF-{t[0].number}_{t[1].number}') for t in
+                                         circuit.get_span_fields()]
                             else:
-                                response['side'] = ['L', 'M', 'R']
+                                response['section_type'] = [('tower', 'Tower'), ('span_field', 'Span Field')]
                         else:
-                            response['traverse'] = to_list(c[s].traverses.keys())
-                    else:
-                        # cause I got enough memory...
-                        response['section'] = [(c,c) for c in c.keys()] \
-                            if st == 'tower' else \
-                            [(t[0].identifier,f'SF-{t[0].number}_{t[1].number}') for t in circuit.get_span_fields()]
+                            response['circuit'] = [(c.id, c.identifier) for c in
+                                                   Circuit.get_user_related_objects(request.user)]
+
+                        return JsonResponse(response)
                 else:
-                    response['section_type'] = [('tower', 'Tower'), ('span_field', 'Span Field')]
+                    if 'SF-' in section_id:
+                        # If section is Span Field, the string has form SF-{t1.id padded}_{t2.id padded}
+                        t1, t2 = section_id.split('-')[1].split('_')
+                        # TODO: This might cause problems later. Some sort of lambda filter would be ideal
+                        t1 = circuit.get_towers().filter(identifier__endswith=t1)[0]
+                        t2 = circuit.get_towers().filter(identifier__endswith=t2)[0]
+                        macro = [t1, t2]
+                    else:
+                        macro = circuit.get_towers().get(identifier=section_id)
+
+                    fault = Fault.objects.get(pk=fault_id)
+                    images = fault.get_images()
+                    marks = fault.get_marks()
+                    circuit = Circuit.objects.get(pk=fault.address['circuit'])
+                    components = circuit.get_components()
+                    types = circuit.get_types()
+                    context = {
+                        'fault': fault,
+                        'images': images,
+                        'marks': marks,
+                        'circuit': circuit,
+                        'components': components,
+                        'types': types,
+                        'section': section_id,
+
+                    }
+                    t = loader.get_template('plgis/fault.html')
+                    return HttpResponse(t.render(context, request))
             else:
-                response['circuit'] = [(c.id, c.identifier) for c in Circuit.get_user_related_objects(request.user)]
-
-            return JsonResponse(response)
+                t = loader.get_template('plgis/list_faults.html')
+                context = {
+                    'faults': Fault.objects.filter(address__circuit=str(circuit_id)).filter(address__section=section_id)
+                }
+                return HttpResponse(t.render(context, request))
+        else:
+            towers = circuit.get_towers()
+            span_fields = [f'SF-{towers[i].number}_{towers[i + 1].number}' for i in range(len(towers) - 1)]
+            t = loader.get_template("plgis/select_section.html")
+            context = {
+                'circuit': circuit,
+                'towers': towers,
+                'span_fields': span_fields,
+                'view': 'fault',
+                'faults': Fault.objects.filter(address__circuit=str(circuit_id))
+            }
+            return HttpResponse(t.render(context, request))
     else:
-        fault = Fault.objects.get(pk=fault_id)
-        images = fault.get_images()
-        marks = fault.get_marks()
-        circuit = Circuit.objects.get(pk=fault.address['circuit'])
-        components = circuit.get_components()
-        types = circuit.get_types()
+        t = loader.get_template('plgis/select_circuit.html')
+        circuits = [str(c.id) for c in Circuit.get_user_related_objects(request.user)]
         context = {
-            'fault': fault,
-            'images': images,
-            'marks': marks,
-            'circuit': circuit,
-            'components': components,
-            'types': types,
-
+            'circuits': Circuit.get_user_related_objects(request.user),
+            'view': 'fault',
+            'faults': Fault.objects.filter(address__circuit__in=circuits)
         }
-        t = loader.get_template('plgis/fault.html')
         return HttpResponse(t.render(context, request))

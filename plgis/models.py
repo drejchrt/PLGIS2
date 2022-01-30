@@ -1,3 +1,4 @@
+from datetime import datetime
 import os
 from operator import itemgetter
 
@@ -97,8 +98,14 @@ class Circuit(models.Model):
                 sfmin = sf
         return sfmin
 
+    def get_images(self):
+        return Image.objects.filter(circuit=self)
+
     def get_faults(self):
         return Fault.objects.filter(address__circuit=str(self.id))
+
+    def get_marks(self):
+        return Marking.objects.filter(image__circuit=self)
 
     def get_components(self):
         return set([f.component for f in Fault.objects.filter(address__circuit=str(self.id))])
@@ -195,7 +202,11 @@ class Image(models.Model):
             return img.size
 
     def get_date_taken(self):
-        return get_date_taken_from_exif(self.path)
+        try:
+            return get_date_taken_from_exif(self.path)
+        except (KeyError, TypeError):
+            return datetime.fromtimestamp(0)
+
 
     def get_fname(self):
         return os.path.basename(self.path)

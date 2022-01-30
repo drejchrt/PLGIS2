@@ -1,0 +1,296 @@
+{% extends 'plgis/base.html' %}
+{% load static %}
+{% load custom_tags %}
+
+
+{% block title %}PLGIS | Browse Imagery {% endblock %}
+
+{% block additional_styles %}
+    <style>
+        .card img {
+            border-top-left-radius: .35rem;
+            border-top-right-radius: .35rem;
+        }
+    </style>
+
+    <link href="{% static 'sb-admin-2/vendor/datatables/dataTables.bootstrap4.min.css' %}" rel="stylesheet">
+    <style>
+        tr.link:hover {
+            background: #eeeeee;
+            text-decoration: none;
+
+        }
+
+        td a {
+            display: block;
+            text-decoration: inherit;
+        }
+    </style>
+
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.12.0/css/ol.css"
+          type="text/css">
+    <link rel="stylesheet"
+          href="{% static "plgis/css/map.css" %}"
+          type="text/css">
+    <style>
+        .map {
+            height: 100%;
+            width: 100%;
+            border-radius: .35rem;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.12.0/build/ol.js"></script>
+    {# I had to put it here, since this must be loaded before bootstrap and jquery #}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"></script>
+{% endblock %}
+
+{% block modals %}
+    <div class="modal fade" id="delete-modal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+         aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLabel">Are you sure?</h5>
+                    <button class="close" type="button" data-dismiss="modal" aria-label="Close">
+                        <span>×</span>
+                    </button>
+                </div>
+                <div class="modal-body">Do you really want to <strong>delete this image</strong>?</div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" type="button" data-dismiss="modal">
+                        <i class="fa fa-cancel"></i> Cancel
+                    </button>
+                    <a class="btn btn-danger"
+                       href="{% url 'image_delete' circuit_id=image.circuit.id section_id=image.properties.section image_id=image.id %}">
+                        <i class="fa fa-trash"></i> Delete
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="edit-modal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+         aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLabel">Edit {{ image.get_fname }}</h5>
+                    <button class="close" type="button" data-dismiss="modal" aria-label="Close">
+                        <span>×</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" type="button" data-dismiss="modal">
+                        <i class="fa fa-cancel"></i> Cancel
+                    </button>
+                    <a class="btn btn-primary"
+                       href="{% url 'image_edit' circuit_id=image.circuit.id section_id=image.properties.section image_id=image.id %}">
+                        <i class="fa fa-save"></i> Save Changes
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}
+
+{% block content %}
+    <div class="row mb-4 bg">
+        <div class="col-12">
+            <div class="card shadow">
+                <img class="card-img-top" src="\{{ image.get_media_path }}">
+                <div class="card-body">
+                    <h3 class="card-title text-center">{{ image.get_fname }}</h3>
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <p class="card-text">
+                            <ul class="list-group list-group-flush">
+                                <li class="list-group-item">Circuit: <a
+                                        href="{% url 'circuit' id=image.circuit.id %}">{{ image.circuit }}</a></li>
+                                <li class="list-group-item">Section: {{ image.properties.section }}</li>
+                                <li class="list-group-item">Dimensions: {{ image.get_dimensions }} px</li>
+                                <li class="list-group-item">Date Taken: {{ image.get_date_taken }}</li>
+                                <li class="list-group-item">Insepcted: {{ image.inspected }}</li>
+                                <li class="list-group-item">Insepcted by: <a
+                                        href="{% url 'user' id=image.inspector.id %}">{{ image.inspector }}</a></li>
+                                <li class="list-group-item">Uploaded by: <a
+                                        href="{% url 'user' id=image.author.id %}">{{ image.author }}</a></li>
+                                <li class="list-group-item">Size {{ image.get_size|temp_round:3 }} MB</li>
+                                <li class="list-group-item">Position: {{ image.position }}</li>
+                                <li class="list-group-item">Location on Filesystem: {{ image.path }}</li>
+                            </ul>
+                            </p>
+                        </div>
+                        <div class="col-6">
+                            <div class="map" id="map">
+                            </div>
+                            <div id="popup" class="ol-popup">
+                                <a href="#" id="popup-closer" class="ol-popup-closer"></a>
+                                <div id="popup-content"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-12">
+                            {% include 'plgis/widgets/fault_list.html' %}
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer text-center">
+                    <button class="btn btn-danger" data-toggle="modal" data-target="#delete-modal">
+                        <i class="fa fa-trash"></i> Delete
+                    </button>
+                    <button class="btn btn-primary" data-toggle="modal" data-target="#edit-modal">
+                        <i class="fa fa-pen"></i> Edit
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+{% endblock %}
+
+{% block additional_scripts %}
+    <!-- Page level plugins -->
+    <script src="{% static 'sb-admin-2/vendor/datatables/jquery.dataTables.min.js' %}"></script>
+    <script src="{% static 'sb-admin-2/vendor/datatables/dataTables.bootstrap4.min.js' %}"></script>
+
+    <script>
+        $(document).ready(function () {
+            $('#dataTable').DataTable();
+            $('#dataTable tr').click(function () {
+                var href = $(this).attr('data-href');
+                $(`<a href="${href}"></a>`)[0].click();
+            })
+
+            var styles = {
+                'tower': function (f) {
+                    return [
+                        new ol.style.Style({
+                            image: new ol.style.RegularShape({
+                                fill: new ol.style.Fill({color: 'white'}),
+                                stroke: new ol.style.Stroke({color: 'black', width: 2}),
+                                points: 3,
+                                radius: 10,
+                                rotation: 0,
+                                angle: 0,
+                            }),
+                        }),
+                    ]
+                },
+                'cam_pos': function (f) {
+                    return [
+                        new ol.style.Style({
+                            image: new ol.style.Circle({
+                                fill: new ol.style.Fill({color: 'rgba(255,255,255,0)'}),
+                                stroke: new ol.style.Stroke({color: '#808080', width: 2}),
+                                radius: 8,
+                            }),
+                        }),
+                    ]
+                },
+                'cam_pos_actual': function (f) {
+                    return [
+                        new ol.style.Style({
+                            image: new ol.style.Circle({
+                                fill: new ol.style.Fill({color: 'rgb(255,251,0)'}),
+                                stroke: new ol.style.Stroke({color: '#808080', width: 2}),
+                                radius: 8,
+                            }),
+                        }),
+                    ]
+                }
+            }
+
+            var map = new ol.Map({
+                target: 'map',
+                layers: [
+                    new ol.layer.Tile({
+                        source: new ol.source.OSM()
+                    }),
+                    new ol.layer.Vector({
+                        source: new ol.source.Vector({
+                            features: [
+                                {% for t in circuit.get_towers %}
+                                    new ol.Feature({
+                                        geometry: new ol.geom.Point(ol.proj.fromLonLat(
+                                            [{{ t.position.x  }}, {{ t.position.y }}])),
+                                        popup: '{{ t.identifier }}'
+                                    }),
+                                {% endfor %}
+                            ],
+                        }),
+                        style: styles['tower']
+                    }),
+                    new ol.layer.Vector({
+                        source: new ol.source.Vector({
+                            features: [
+                                {% for i in circuit.get_images %}
+                                    {% if i != image %}
+                                        new ol.Feature({
+                                            geometry: new ol.geom.Point(ol.proj.fromLonLat([
+                                                {{i.position.x}}, {{ i.position.y }}
+                                            ])),
+                                            popup: '{{ i.get_fname }}'
+                                        }),
+                                    {% endif %}
+                                {% endfor %}
+                            ]
+                        }),
+                        style: styles['cam_pos']
+                    }),
+                    new ol.layer.Vector({
+                        source: new ol.source.Vector({
+                            features: [
+                                new ol.Feature({
+                                    geometry: new ol.geom.Point(ol.proj.fromLonLat([
+                                        {{ image.position.x }}, {{ image.position.y }}
+                                    ])),
+                                    popup: '{{ i.get_fname }}'
+                                })
+                            ]
+                        }),
+                        style: styles['cam_pos_actual']
+                    }),
+
+                ],
+                view: new ol.View({
+                    center: ol.proj.fromLonLat([{{ image.position.x }}, {{ image.position.y }}]),
+                    zoom: 16
+                })
+            });
+
+            var container = document.getElementById('popup');
+            var content = document.getElementById('popup-content');
+            var closer = document.getElementById('popup-closer');
+
+            var overlay = new ol.Overlay({
+                element: container,
+                autoPan: true,
+                autoPanAnimation: {
+                    duration: 250
+                }
+            });
+            map.addOverlay(overlay);
+
+            closer.onclick = function () {
+                overlay.setPosition(undefined);
+                closer.blur();
+                return false;
+            };
+
+            map.on('singleclick', function (event) {
+                map.forEachFeatureAtPixel(event.pixel, function (f, l) {
+                    var coordinate = event.coordinate;
+                    content.innerHTML = f.get('popup');
+                    overlay.setPosition(coordinate);
+                })
+            });
+
+        });
+    </script>
+{% endblock %}

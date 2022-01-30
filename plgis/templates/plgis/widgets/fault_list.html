@@ -1,0 +1,88 @@
+<div class="card shadow">
+    <div class="card-header">
+        <h5 class="card-title">Faults</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                <thead>
+                <tr>
+                    <th>Circuit</th>
+                    <th>Section</th>
+                    <th>Traverse</th>
+                    <th>Side</th>
+                    <th>Bundle</th>
+                    <th>Cable</th>
+                    <th>Component</th>
+                    <th>Type</th>
+                    <th>Severity</th>
+                    <th>Author</th>
+                    <th>Date Inspected</th>
+                    <th>Comment</th>
+                    <th>Markings</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for f in faults %}
+                    <tr class="link" data-href="{% url 'fault' circuit_id=f.address.circuit section_id=f.address.section fault_id=f.id %}">
+                        <td>{{ f.address.circuit }}</td>
+                        <td>{{ f.address.section }}</td>
+                        <td>{{ f.address.traverse }}</td>
+                        <td>{{ f.address.side }}</td>
+                        <td>{{ f.address.bundle }}</td>
+                        <td>{{ f.address.cable }}</td>
+                        <td>{{ f.component }}</td>
+                        <td>{{ f.type }}</td>
+                        <td>{{ f.severity }}</td>
+                        <td><a href="{% url 'user' id=request.user.id %}">{{ f.author }}</a></td>
+                        <td>{{ f.date_inspected }}</td>
+                        <td>{{ f.comment }}</td>
+                        <td>
+                            {% for i in f.get_images %}
+                                <a href="{% url 'inspection' circuit_id=f.address.circuit section_id=f.address.section image_id=i.id %}">{{ i.get_fname }}</a>
+                            {% endfor %}
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="card-footer"></div>
+</div>
+
+{# REQUIREMENTS FOR THIS WIDGET #}
+
+{#<link href="{% static 'sb-admin-2/vendor/datatables/dataTables.bootstrap4.min.css' %}" rel="stylesheet">#}
+{#    <style>#}
+{#        tr.link:hover {#}
+{#            background: #eeeeee;#}
+{#            text-decoration: none;#}
+{##}
+{#        }#}
+{##}
+{#        td a {#}
+{#            display: block;#}
+{#            text-decoration: inherit;#}
+{#        }#}
+{#    </style>#}
+
+{##}
+{#{% block additional_scripts %}#}
+{#    <!-- Page level plugins -->#}
+{#    <script src="{% static 'sb-admin-2/vendor/datatables/jquery.dataTables.min.js' %}"></script>#}
+{#    <script src="{% static 'sb-admin-2/vendor/datatables/dataTables.bootstrap4.min.js' %}"></script>#}
+{##}
+{#    <script>#}
+{#        $(document).ready(function () {#}
+{#            $('#dataTable').DataTable();#}
+{#            $('#dataTable tr').click(function () {#}
+{#                var href = $(this).attr('data-href');#}
+{#                $(`<a href="${href}"></a>`)[0].click();#}
+{#            })#}
+{#        });#}
+{##}
+{#    </script>#}
+{##}
+{##}
+{# {% endblock %} #}

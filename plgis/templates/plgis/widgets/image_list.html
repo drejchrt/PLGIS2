@@ -1,0 +1,47 @@
+{% load custom_tags %}
+
+<div class="card shadow">
+    <div class="card-header">
+        <h5 class="card-title">Images</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                <thead>
+                <tr>
+                    <th>Filename</th>
+                    <th>Circuit</th>
+                    <th>Section</th>
+                    <th>Dimensions [px]</th>
+                    <th>Date Taken</th>
+                    <th>Inspected</th>
+                    <th>Inspected By</th>
+                    <th>Uploaded By</th>
+                    <th>Size [MB ]</th>
+                    <th>Position</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for i in images %}
+                    {# TODO insert links and other computed stats, such as number of marks etc. #}
+                    <tr class="link"
+                        data-href="{% url 'image' circuit_id=i.circuit.id section_id=i.properties.section image_id=i.id %}">
+                        <td>{{ i.get_fname }}</td>
+                        <td>{{ i.circuit.identifier }}</td>
+                        <td>{{ i.properties.section }}</td>
+                        <td>{{ i.get_dimensions }}</td>
+                        <td>{{ i.date_taken }}</td>
+                        <td>{{ i.inspected }}</td>
+                        <td>{{ i.inspector }}</td>
+                        <td>{{ i.author }}</td>
+                        <td>{{ i.get_size|temp_round:3 }}</td>
+                        <td>{{ i.position }}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="card-footer"></div>
+</div>
+

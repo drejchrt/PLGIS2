@@ -1,0 +1,77 @@
+{% extends "plgis/base.html" %}
+{% load static %}
+{% block title %}PLGIS | Inspection {% endblock %}
+
+{% block additional_styles %}
+    <link href="{% static 'sb-admin-2/vendor/datatables/dataTables.bootstrap4.min.css' %}" rel="stylesheet">
+    <style>
+        tr.link:hover {
+            background: #eeeeee;
+            text-decoration: none;
+
+        }
+
+        td a {
+            display: block;
+            text-decoration: inherit;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <div class="row mb-4">
+        <div class="col-3"></div>
+        <div class="col-6">
+            <div class="card shadow">
+                <div class="card-header">
+                    <h3 class="text-primary">Select circuit to inspect</h3>
+                </div>
+                <div class="card-body">
+                    <ul>
+                        {% for c in circuits %}
+                            <li>
+                                <a href="{% url view c.id %}">{{ c.identifier }}</a>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                <div class="card-footer"></div>
+            </div>
+        </div>
+        <div class="col-3"></div>
+    </div>
+    {% if view == 'fault' %}
+        <div class="row">
+            <div class="col-12">
+                {% include 'plgis/widgets/fault_list.html' %}
+            </div>
+        </div>
+    {% elif view == 'image' %}
+        <div class="row">
+            <div class="col-12">
+                {% include 'plgis/widgets/image_list.html' %}
+            </div>
+        </div>
+
+    {% endif %}
+
+{% endblock %}
+
+{% block additional_scripts %}
+    <!-- Page level plugins -->
+    <script src="{% static 'sb-admin-2/vendor/datatables/jquery.dataTables.min.js' %}"></script>
+    <script src="{% static 'sb-admin-2/vendor/datatables/dataTables.bootstrap4.min.js' %}"></script>
+
+    <script>
+        $(document).ready(function () {
+            $('#dataTable').DataTable();
+            $('#dataTable tr').click(function () {
+                var href = $(this).attr('data-href');
+                $(`<a href="${href}"></a>`)[0].click();
+            })
+        });
+
+    </script>
+
+
+{% endblock %}

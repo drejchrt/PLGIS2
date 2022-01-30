@@ -22,19 +22,24 @@ urlpatterns = [
     path('users/new', views.request_new_account, name='register'),
     path('users/<int:id>', views.user_profile, name='user'),
 
-    path('img_upload',views.img_upload, name='img_upload'),
-    path('img_list',views.img_list, name='img_list'),
+    path('img_upload', views.img_upload, name='img_upload'),
+
+    path('image/', views.image, name='image'),
+    path('image/<int:circuit_id>', views.image, name='image'),
+    path('image/<int:circuit_id>/<str:section_id>', views.image, name='image'),
+    path('image/<int:circuit_id>/<str:section_id>/<int:image_id>', views.image, name='image'),
+    path('image/<int:circuit_id>/<str:section_id>/<int:image_id>/delete', views.image, name='image_delete'),
+    path('image/<int:circuit_id>/<str:section_id>/<int:image_id>/edit', views.image, name='image_edit'),
 
     path('inspection/', views.inspection, name='inspection'),
     path('inspection/<int:circuit_id>', views.inspection, name='inspection'),
     path('inspection/<int:circuit_id>/<str:section_id>', views.inspection, name='inspection'),
     path('inspection/<int:circuit_id>/<str:section_id>/<int:image_id>', views.inspection, name='inspection'),
 
-    path('marking/<int:mark_id>', views.marking, name='marking'),
-
-    path('fault/<int:fault_id>', views.fault, name='fault'),
-    path('fault/<int:fault_id>/delete', views.fault, name='fault_delete'), # redirect to delete view
-    path('fault/<int:fault_id>/edit', views.fault, name='fault_edit'), # redirect to delete view
+    path('fault/', views.fault, name='fault'),
+    path('fault/<int:circuit_id>', views.fault, name='fault'),
+    path('fault/<int:circuit_id>/<str:section_id>', views.fault, name='fault'),
+    path('fault/<int:circuit_id>/<str:section_id>/<int:fault_id>', views.fault, name='fault'),
+    path('fault/<int:circuit_id>/<str:section_id>/<int:fault_id>/delete', views.fault, name='fault_delete'),
+    path('fault/<int:circuit_id>/<str:section_id>/<int:fault_id>/edit', views.fault, name='fault_edit'),
 ]
-
-

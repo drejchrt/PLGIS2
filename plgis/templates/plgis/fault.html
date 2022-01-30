@@ -20,6 +20,35 @@
             height: 75vh;
         }
     </style>
+
+    <link href="{% static 'sb-admin-2/vendor/datatables/dataTables.bootstrap4.min.css' %}" rel="stylesheet">
+    <style>
+        tr.link:hover {
+            background: #eeeeee;
+            text-decoration: none;
+
+        }
+
+        td a {
+            display: block;
+            text-decoration: inherit;
+        }
+    </style>
+
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.12.0/css/ol.css"
+          type="text/css">
+    <link rel="stylesheet"
+          href="{% static "plgis/css/map.css" %}"
+          type="text/css">
+    <script src="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.12.0/build/ol.js"></script>
+    <style>
+        .map {
+            height: 100%;
+            width: 100%;
+            border-radius: .35rem;
+        }
+    </style>
 {% endblock %}
 
 {% block modals %}
@@ -38,7 +67,8 @@
                     <button class="btn btn-secondary" type="button" data-dismiss="modal">
                         <i class="fa fa-cancel"></i> Cancel
                     </button>
-                    <a class="btn btn-danger" href="{% url 'fault_delete' fault_id=fault.id %}">
+                    <a class="btn btn-danger"
+                       href="{% url 'fault_delete' circuit_id=fault.address.circuit section_id=fault.address.section fault_id=fault.id %}">
                         <i class="fa fa-trash"></i> Delete
                     </a>
                 </div>
@@ -57,7 +87,9 @@
                     </button>
                 </div>
                 <div class="modal-body">
-                    <form class="fault-form" action="{% url 'fault_edit' fault_id=fault.id %}" method="POST">
+                    <form class="fault-form"
+                          action="{% url 'fault_edit' circuit_id=fault.address.circuit section_id=fault.address.section fault_id=fault.id %}"
+                          method="POST">
                         {% include 'plgis/forms/fault_form.html' %}
                     </form>
                 </div>
@@ -65,9 +97,9 @@
                     <button class="btn btn-secondary" type="button" data-dismiss="modal">
                         <i class="fa fa-ban"></i> Cancel
                     </button>
-                    <a class="btn btn-primary" href="{% url 'fault_delete' fault_id=fault.id %}">
+                    <button class="btn btn-primary">
                         <i class="fa fa-save"></i> Save Changes
-                    </a>
+                    </button>
                 </div>
             </div>
         </div>
@@ -77,84 +109,84 @@
 {% block content %}
     <div class="row mb-4">
         <div class="col-12">
-            <div id="carouselExampleIndicators" class="carousel slide" data-ride="carousel" data-interval="false">
-                <ol class="carousel-indicators">
-                    {% for i in images %}
-                        <li data-target="#carouselExampleIndicators" data-slide-to="{{ forloop.counter0 }}"
-                                {% if forloop.counter0 == 0 %} class="active" {% endif %}></li>
-                    {% endfor %}
-                </ol>
-                <div class="carousel-inner">
-                    {% for i in images %}
-                        <div id="canvas" class="carousel-item {% if forloop.counter0 == 0 %}active{% endif %}">
-                            <svg viewBox="0 0 {{ i.get_dimensions.0 }} {{ i.get_dimensions.1 }} ">
-                                <image href="\{{ i.get_media_path }}"
-                                       x="0"
-                                       y="0"
-                                       draggable="false"
-                                       transform="translate(0,0)"/>
-                                {% for mark in marks %}
-                                    {% if mark.image == i %}
-                                        <polygon id="{{ mark.id }}" points="{{ mark.marking }}"/>
-                                    {% endif %}
-                                {% endfor %}
-                            </svg>
-                            <div class="carousel-caption d-none d-md-block">
-                                <h5>{{ fault }}@{{ i.get_fname }}</h5>
-                                <p>Circuit: {{ i.circuit.id }}</p>
-                            </div>
-                        </div>
-                    {% endfor %}
-                </div>
-                <a class="carousel-control-prev" href="#carouselExampleIndicators" role="button" data-slide="prev">
-                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-                    <span class="sr-only">Previous</span>
-                </a>
-                <a class="carousel-control-next" href="#carouselExampleIndicators" role="button" data-slide="next">
-                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
-                    <span class="sr-only">Next</span>
-                </a>
-            </div>
-        </div>
-    </div>
-
-    <div class="row">
-        <div class="col-6">
             <div class="card shadow">
-                <div class="card-header">
-                    <h3>{{ fault.get_macro_type }} Fault</h3>
+                <div id="carouselExampleIndicators" class="carousel slide" data-ride="carousel" data-interval="false">
+                    <ol class="carousel-indicators">
+                        {% for i in images %}
+                            <li data-target="#carouselExampleIndicators" data-slide-to="{{ forloop.counter0 }}"
+                                    {% if forloop.counter0 == 0 %} class="active" {% endif %}></li>
+                        {% endfor %}
+                    </ol>
+                    <div class="carousel-inner">
+                        {% for i in images %}
+                            <div id="canvas" class="carousel-item {% if forloop.counter0 == 0 %}active{% endif %}">
+                                <svg viewBox="0 0 {{ i.get_dimensions.0 }} {{ i.get_dimensions.1 }} ">
+                                    <image href="\{{ i.get_media_path }}"
+                                           x="0"
+                                           y="0"
+                                           draggable="false"
+                                           transform="translate(0,0)"/>
+                                    {% for mark in marks %}
+                                        {% if mark.image == i %}
+                                            <polygon id="{{ mark.id }}" points="{{ mark.marking }}"/>
+                                        {% endif %}
+                                    {% endfor %}
+                                </svg>
+                                <div class="carousel-caption d-none d-md-block">
+                                    <h5>{{ fault }}@<a
+                                            href="{% url 'image' circuit_id=i.circuit.id section_id=i.properties.section image_id=i.id %}">{{ i.get_fname }}</a>
+                                    </h5>
+                                    <p>Circuit: {{ i.circuit.id }}</p>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <a class="carousel-control-prev" href="#carouselExampleIndicators" role="button" data-slide="prev">
+                        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                        <span class="sr-only">Previous</span>
+                    </a>
+                    <a class="carousel-control-next" href="#carouselExampleIndicators" role="button" data-slide="next">
+                        <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                        <span class="sr-only">Next</span>
+                    </a>
                 </div>
                 <div class="card-body">
-                    <div class="row">
+                    <h3 class="text-center card-title">{{ fault }}</h3>
+                    <div class="row mb-4">
                         <div class="col-6">
-                            <ul>
-                                <li>Component: {{ fault.component }}</li>
-                                <li>Type: {{ fault.type }}</li>
-                                <li>Severity: {{ fault.severity }}</li>
-                                <li>Author: <a href="{% url 'user' id=fault.author.id %}">{{ fault.author }}</a></li>
-                                <li>Date Inspected: {{ fault.date_added }}</li>
-                            </ul>
-                        </div>
-                        <div class="col-6">
-                            <ul>
-                                <li>Circuit: <a href="{% url 'circuit' id=circuit.id %}">{{ circuit.identifier }}</a>
-                                </li>
-                                <li>Section: <a
+                            <ul class="list-group list-group-flush">
+                                <li class="list-group-item">Circuit: <a
+                                        href="{% url 'circuit' id=circuit.id %}">{{ circuit.identifier }}</a></li>
+                                <li class="list-group-item">Section: <a
                                         href="{% url 'inspection' circuit_id=circuit.id section_id=fault.address.section %}">{{ fault.address.section }}</a>
                                 </li>
-                                <li>Traverse: {{ fault.address.traverse }}</li>
-                                <li>Side: {{ fault.address.side }}</li>
+                                <li class="list-group-item">Traverse: {{ fault.address.traverse }}</li>
+                                <li class="list-group-item">Side: {{ fault.address.side }}</li>
                                 {% if fault.get_macro_type == 'Span Field' %}
-                                    <li>Bundle: {{ fault.address.bundle }}</li>
-                                    <li>Cable: {{ fault.address.cable }}</li>
+                                    <li class="list-group-item">Bundle: {{ fault.address.bundle }}</li>
+                                    <li class="list-group-item">Cable: {{ fault.address.cable }}</li>
                                 {% endif %}
+                                <li class="list-group-item">Component: {{ fault.component }}</li>
+                                <li class="list-group-item">Type: {{ fault.type }}</li>
+                                <li class="list-group-item">Severity: {{ fault.severity }}</li>
+                                <li class="list-group-item">Author: <a
+                                        href="{% url 'user' id=fault.author.id %}">{{ fault.author }}</a></li>
+                                <li class="list-group-item">Date Inspected: {{ fault.date_added }}</li>
+                                <li class="list-group-item">Comment: {{ fault.comment }}</li>
                             </ul>
                         </div>
-                        <div class="row">
-                            <div class="col-12">
-                                Comment:
-                                <p>{{ fault.comment }}</p>
+                        <div class="col-6">
+                            <div class="map" id="map">
                             </div>
+                            <div id="popup" class="ol-popup">
+                                <a href="#" id="popup-closer" class="ol-popup-closer"></a>
+                                <div id="popup-content"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-12">
+                            {% include "plgis/widgets/image_list.html" %}
                         </div>
                     </div>
                 </div>
@@ -168,18 +200,6 @@
                 </div>
             </div>
         </div>
-        <div class="col-6">
-            <div class="card shadow">
-                <div class="card-header"></div>
-                <div class="card-body">
-                    <div class="map">
-
-                    </div>
-                </div>
-                <div class="card-footer"></div>
-            </div>
-        </div>
-
     </div>
 {% endblock %}
 
@@ -189,7 +209,7 @@
 
         $form.find('.address:input').on('focus', function () {
             $.ajax({
-                url: '{% url 'fault' fault_id=fault.id  %}',
+                url: '{% url 'fault' circuit_id=circuit.id section_id=section fault_id=fault.id  %}',
                 type: "POST",
                 headers: {
                     "X-CSRFToken": $('meta[name="csrf-token"]').attr('content')
@@ -270,6 +290,145 @@
             var val = $form.find('input#new-component').val();
             $(`<option value="${val}">${val}</option>`)
                 .appendTo($form.find('select#component'));
+        });
+
+    </script>
+    <script src="{% static 'sb-admin-2/vendor/datatables/jquery.dataTables.min.js' %}"></script>
+    <script src="{% static 'sb-admin-2/vendor/datatables/dataTables.bootstrap4.min.js' %}"></script>
+
+    <script>
+        $(document).ready(function () {
+            $('#dataTable').DataTable();
+            $('#dataTable tr').click(function () {
+                var href = $(this).attr('data-href');
+                $(`<a href="${href}"></a>`)[0].click();
+            })
+
+            var styles = {
+                'tower': function (f) {
+                    return [
+                        new ol.style.Style({
+                            image: new ol.style.RegularShape({
+                                fill: new ol.style.Fill({color: 'white'}),
+                                stroke: new ol.style.Stroke({color: 'black', width: 2}),
+                                points: 3,
+                                radius: 10,
+                                rotation: 0,
+                                angle: 0,
+                            }),
+                        }),
+                    ]
+                },
+                'cam_pos': function (f) {
+                    return [
+                        new ol.style.Style({
+                            image: new ol.style.Circle({
+                                fill: new ol.style.Fill({color: 'rgba(255,255,255,0)'}),
+                                stroke: new ol.style.Stroke({color: '#808080', width: 2}),
+                                radius: 8,
+                            }),
+                        }),
+                    ]
+                },
+                'cam_pos_actual': function (f) {
+                    return [
+                        new ol.style.Style({
+                            image: new ol.style.Circle({
+                                fill: new ol.style.Fill({color: 'rgb(255,251,0)'}),
+                                stroke: new ol.style.Stroke({color: '#808080', width: 2}),
+                                radius: 8,
+                            }),
+                        }),
+                    ]
+                }
+            }
+
+            var map = new ol.Map({
+                target: 'map',
+                layers: [
+                    new ol.layer.Tile({
+                        source: new ol.source.OSM()
+                    }),
+                    new ol.layer.Vector({
+                        source: new ol.source.Vector({
+                            features: [
+                                {% for t in circuit.get_towers %}
+                                    new ol.Feature({
+                                        geometry: new ol.geom.Point(ol.proj.fromLonLat(
+                                            [{{ t.position.x  }}, {{ t.position.y }}])),
+                                        popup: '{{ t.identifier }}'
+                                    }),
+                                {% endfor %}
+                            ],
+                        }),
+                        style: styles['tower']
+                    }),
+                    new ol.layer.Vector({
+                        source: new ol.source.Vector({
+                            features: [
+                                {% for i in circuit.get_images %}
+                                    {% if i != image %}
+                                        new ol.Feature({
+                                            geometry: new ol.geom.Point(ol.proj.fromLonLat([
+                                                {{i.position.x}}, {{ i.position.y }}
+                                            ])),
+                                            popup: '{{ i.get_fname }}'
+                                        }),
+                                    {% endif %}
+                                {% endfor %}
+                            ]
+                        }),
+                        style: styles['cam_pos']
+                    }),
+                    new ol.layer.Vector({
+                        source: new ol.source.Vector({
+                            features: [
+                                {% for image in images %}
+                                    new ol.Feature({
+                                        geometry: new ol.geom.Point(ol.proj.fromLonLat([
+                                            {{ image.position.x }}, {{ image.position.y }}
+                                        ])),
+                                        popup: '{{ i.get_fname }}'
+                                    }),
+                                {% endfor %}
+                            ]
+                        }),
+                        style: styles['cam_pos_actual']
+                    }),
+
+                ],
+                view: new ol.View({
+                    center: ol.proj.fromLonLat([{{ fault.get_position.x }}, {{ fault.get_position.y }}]),
+                    zoom: 16
+                })
+            });
+
+            var container = document.getElementById('popup');
+            var content = document.getElementById('popup-content');
+            var closer = document.getElementById('popup-closer');
+
+            var overlay = new ol.Overlay({
+                element: container,
+                autoPan: true,
+                autoPanAnimation: {
+                    duration: 250
+                }
+            });
+            map.addOverlay(overlay);
+
+            closer.onclick = function () {
+                overlay.setPosition(undefined);
+                closer.blur();
+                return false;
+            };
+
+            map.on('singleclick', function (event) {
+                map.forEachFeatureAtPixel(event.pixel, function (f, l) {
+                    var coordinate = event.coordinate;
+                    content.innerHTML = f.get('popup');
+                    overlay.setPosition(coordinate);
+                })
+            });
         });
     </script>
 {% endblock %}

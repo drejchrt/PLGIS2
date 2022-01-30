@@ -1,0 +1,43 @@
+{% extends 'plgis/base.html' %}
+{% load static %}
+
+{% block title %} PLGIS | Browse imagery {% endblock %}
+
+{% block additional_styles %}
+    <link href="{% static 'sb-admin-2/vendor/datatables/dataTables.bootstrap4.min.css' %}" rel="stylesheet">
+    <style>
+        tr.link:hover {
+            background: #eeeeee;
+            text-decoration: none;
+
+        }
+
+        td a {
+            display: block;
+            text-decoration: inherit;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    {% include 'plgis/widgets/image_list.html' %}
+{% endblock %}
+
+{% block additional_scripts %}
+    <!-- Page level plugins -->
+        <script src="{% static 'sb-admin-2/vendor/datatables/jquery.dataTables.min.js' %}"></script>
+        <script src="{% static 'sb-admin-2/vendor/datatables/dataTables.bootstrap4.min.js' %}"></script>
+
+        <script>
+            $(document).ready(function () {
+                $('#dataTable').DataTable();
+                $('#dataTable tr').click(function(){
+                    var href = $(this).attr('data-href');
+                    $(`<a href="${href}"></a>`)[0].click();
+                })
+            });
+
+        </script>
+
+
+{% endblock %}

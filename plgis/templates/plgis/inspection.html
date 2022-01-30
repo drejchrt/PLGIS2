@@ -136,7 +136,7 @@
                                                 <li>
                                                     <input name="mark_select" type="radio"
                                                            value="{{ f.fault.id }}">
-                                                    <a href="{% url 'fault' fault_id=f.id %}"
+                                                    <a href="{% url 'fault' circuit_id=circuit.id section_id=section fault_id=f.id %}"
                                                        target="_blank">{{ f }}</a>
                                                 </li>
                                             {% endif %}
@@ -151,7 +151,7 @@
                                                 <li>
                                                     <input name="mark_select" type="radio"
                                                            value="{{ f.id }}">
-                                                    <a href="{% url 'fault' fault_id=f.id %}"
+                                                    <a href="{% url 'fault' circuit_id=circuit.id section_id=section fault_id=f.id %}"
                                                        target="_blank">{{ f }}</a>
                                                 </li>
                                             {% endif %}
@@ -171,7 +171,7 @@
                                         <select id="all-marks-select" name="mark_option" class="form-control">
                                             {% for f in circuit_faults %}
                                                 {% if image not in f.get_images %}
-                                                    <option data-href="{% url 'fault' fault_id=f.id %}"
+                                                    <option data-href="{% url 'fault' circuit_id=circuit.id section_id=section fault_id=f.id %}"
                                                             value="{{ f.id }}">{{ f }}</option>
                                                 {% endif %}
                                             {% endfor %}
@@ -444,7 +444,7 @@
                             <h6>Marks:</h6>
                             <ul>
                                 {% for f in faults %}
-                                    <a href="{% url 'fault' fault_id=f.id %}">
+                                    <a href="{% url 'fault' circuit_id=circuit.id section_id=section fault_id=f.id %}">
                                         <li>{{ f }}</li>
                                     </a>
                                 {% endfor %}
