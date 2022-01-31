@@ -17,9 +17,7 @@ from plgis.misc.tools import fkin_move_file, fkin_copy_file, get_date_taken_from
 import PIL
 
 
-# Create your models here.
-
-# Macro Components
+########################################## Macro Components ############################################################
 
 class Circuit(models.Model):
     identifier = models.CharField(max_length=255, unique=True)
@@ -83,6 +81,16 @@ class Circuit(models.Model):
         return tmin
 
     def get_nearest_span_field(self, point, max_valid_dist=0):
+        """
+        Returns nearses spanfiled to the specicfied point.
+        One can also specify maximal valid distance, e.g. if the the nearest tower
+        is further than 50 meters, it is not likely, that the point has a relation to
+        the point. However this feature is off per default (max_valid_dist=0)
+        :param point: <GEOSGeometry.Point> Point for which the nearest tower is searched
+        :param max_valid_dist: <float> Maximal allowed distance from any tower
+        :return: <dict> Dictionary representing the nearest spanfield.
+                 keys: name (str) and geometry (GEOSGeometry.LineString)
+        """
         # create spanfield geometries
         towers = self.get_towers()
         sfs = [{
@@ -127,7 +135,7 @@ class Tower(models.Model):
     type = models.CharField(max_length=255)  # TODO: Choices
     components = ArrayField(models.CharField(max_length=255), default=list)
     position = models.PointField()
-    traverses = JSONField(default=dict)
+    traverses = JSONField(default=dict) # Check example structres at bottom of this file:
 
     FIELDS = {
         'ID': identifier,
@@ -140,7 +148,7 @@ class Tower(models.Model):
     def get_absolute_url(self):
         return reverse('tower', kwargs={'id': self.pk})
 
-    ## TODO: Make sure it works
+    # TODO: Make sure this works
     @classmethod
     def get_user_related_objects(cls, user):
         circuits = user.profile.circuits.all()
@@ -168,7 +176,7 @@ class Tower(models.Model):
         return [b['cables'] for b in self.get_bundles()]
 
 
-
+# django.contrib.auth.model.User extenstion
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     organisation = models.CharField(max_length=255)
@@ -179,31 +187,35 @@ class Profile(models.Model):
     circuits = models.ManyToManyField(Circuit)
 
 
+# save Profile instance wiht user
 @receiver(post_save, sender=User)
 def create_or_update_user_profile(sender, instance, created, **kwargs):
     if created:
         Profile.objects.create(user=instance)
     instance.profile.save()
 
+############################################# Inspection Elements ######################################################
 
 class Image(models.Model):
     path = models.FilePathField(path=settings.MEDIA_ROOT, max_length=255)
     circuit = models.ForeignKey(Circuit, on_delete=models.SET_NULL, null=True)
-    properties = models.JSONField(default=dict)
+    properties = models.JSONField(default=dict) # Check the JSON examples on the bottom of this files
     position = models.PointField(null=True, dim=3)
     inspected = models.BooleanField(default=False)
     inspector = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='inspecotr')
     author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='author')
     date_uploaded = models.DateTimeField(auto_now_add=True)
 
-    # TODO: Store some of these values into table?
+    # TODO: Store some of these values into table? (to spare some file system accesses)
     def get_size(self):
         # Size in MB
         return os.stat(self.path).st_size / 1000000.0
 
+    # TODO Store this as table field,
     def get_dimensions(self):
         with PIL.Image.open(self.path) as img:
             return img.size
+
 
     def get_date_taken(self):
         try:
@@ -215,7 +227,7 @@ class Image(models.Model):
     def get_fname(self):
         return os.path.basename(self.path)
 
-    def get_path_from_properties(self):
+    def get_path_from_properties(self): # The path on the FS is given by the image properties => Automatic sorting
         if self.properties['type'] == 'tower':
             tdir = 'towers'
         else:
@@ -230,12 +242,12 @@ class Image(models.Model):
             self.get_fname()
         )
 
-    def get_media_path(self):
+    def get_media_path(self): # Get the path based on the MEDIA_ROOT variable
         nodes = self.path.split(os.sep)
         media = nodes.index('media')
         return os.sep.join(nodes[media:])
 
-    def get_inspection_path(self):
+    def get_inspection_path(self): # Link to inspection of this image
         kw = {
             'circuit_id': self.circuit.id,
             'section_id': self.properties['section'],
@@ -244,7 +256,7 @@ class Image(models.Model):
         return reverse('inspection', kwargs=kw)
 
     @classmethod
-    def get_working_directory_imagery(cls):
+    def get_working_directory_imagery(cls): # Get the images stored in the temporary working directory
         return Image.objects.filter(path__contains='wd')
 
     @classmethod
@@ -252,13 +264,12 @@ class Image(models.Model):
         cfilt = cls.objects.filter(circuit=circuit)
         return cfilt.filter(properties__section=section)
 
-    def move(self, dest):
+    def move(self, dest): # move the file and update the DB entry (the instance must be saved afterwards)
         fkin_move_file(self.path, dest)
         self.path = dest
 
-    def copy_file(self, dest):
+    def copy_file(self, dest): # copy the file. (No DB entry manipulation)
         fkin_copy_file(self.path, dest)
-        self.path = dest
 
 
     def get_faults(self):
@@ -287,7 +298,7 @@ def delete_image_from_fs(sender, instance, created, **kwargs):
 
 
 class Fault(models.Model):
-    address = JSONField(default=dict)
+    address = JSONField(default=dict) # Check the JSON example on the bottom of this file
     component = models.CharField(max_length=255)
     type = models.CharField(max_length=255)
     severity = models.IntegerField()
@@ -362,3 +373,87 @@ class Marking(models.Model):
             return Marking.objects.filter(fault__address__circuit=circuit_id).order_by('-date_updated')
         else:
             return Marking.objects.all().order_by('-date_updated')
+
+########################################################################################################################
+################################################### Example JSONs ######################################################
+########################################################################################################################
+
+
+################################################# Tower.traverses: #####################################################
+# {
+#   "traverse00": {
+#     "number": 0,
+#     "bundles": {
+#       "M-0": {
+#         "side": "M",
+#         "cables": {
+#           "count": "1",
+#           "config": "S"
+#         },
+#         "position": "0",
+#         "components": [           /* Content of the components array is not regulated*/
+#           "Marker Balls"
+#         ]
+#       }
+#     }
+#   },
+#   "traverse01": {
+#     "number": 1,
+#     "bundles": {
+#       "L-1": {
+#         "side": "L",
+#         "cables": {
+#           "count": "4",
+#           "config": "Q"
+#         },
+#         "position": "1",
+#         "components": [
+#           "Vibration Dampers",
+#           "Insulator",
+#           "Fitting"
+#         ]
+#       },
+#       "R-1": {
+#         "side": "R",
+#         "cables": {
+#           "count": "4",
+#           "config": "Q"
+#         },
+#         "position": "1",
+#         "components": [
+#           "Vibration Dampers",
+#           "Insulator",
+#           "Fitting"
+#         ]
+#       }
+#     }
+#   }
+# }
+
+################################################### Image.properties ###################################################
+# {
+#     "type": "tower",
+#     "section": "T_01"
+# }
+#
+# {
+#     "type": "span_field",
+#     "section": "SF-01_02"
+# }
+
+################################################## Fault.address ########################################################
+# {
+#    "side":"M",
+#    "cable":"1",
+#    "bundle":"T0_M_0",
+#    "circuit":"25",
+#    "section":"SF-01_02",
+#    "traverse":"0"
+# }
+#
+# {
+#    "side":"L",
+#    "circuit":"25",
+#    "section":"T_01",
+#    "traverse":"1"
+# }

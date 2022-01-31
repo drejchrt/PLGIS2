@@ -1,6 +1,4 @@
 import json
-import mimetypes
-import os
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -14,7 +12,9 @@ from plgis.spatial.export import export as file_export
 from .models import *
 from .forms import *
 
-# Create your views here.
+# These constants are used by the list, detail, edit, new views.
+# They provide the references to the models and forms, using strings
+# extracted from url
 MODELS = {
     'circuits': Circuit,
     'towers': Tower,
@@ -28,28 +28,48 @@ FORMS = {
 
 
 def index(request):
+    """
+    This view serves the home page or the login page, based on whether
+    the user is logged in or not
+    """
     if not request.user.is_authenticated:
         return redirect('login')
 
+    # TODO: Implement
     t = loader.get_template("plgis/dashboard.html")
     return HttpResponse(t.render({}, request))
 
 
+def e404(request,exception):
+    t = loader.get_template('plgis/e404.html')
+    return HttpResponse(t.render({}, request))
+
+
+# This might be implemented later. The sysadmin should know who is using
+# the app. User accounts can be set in the admin app.
 def request_new_account(request):
     pass
 
 
+# This view will handle queries form the search bar placed on the topbar
+# TODO: Implement
 @login_required
 def lookup(request, query):
     pass
 
 
+# This is such a boner...
 to_list = lambda iterable: [i for i in iterable]  # OMG... This should be posted to r/ProgrammerHumor
 
 
 # TODO: Refactor this view as it shadows reference to list. I'm a freakin' genius
 @login_required
 def list(request):
+    """
+    This view serves to list out macro components, like towers and circuits.
+    :param request: http request
+    :return: http response
+    """
     model_str = request.path.split('/')[1]
     model = MODELS[model_str]
     context = {
@@ -64,6 +84,12 @@ def list(request):
 
 @login_required
 def detail(request, id):
+    """
+    This view serves to view attributes of the macro components
+    :param request: http request
+    :param id: id of the component
+    :return: http response
+    """
     model_str = request.path.split('/')[1]
     model = MODELS[model_str]
     context = {
@@ -83,6 +109,12 @@ def detail(request, id):
 @login_required
 @user_passes_test(lambda u: u.groups.filter(name='managers').exists())
 def edit(request, id):
+    """
+    This view handles editing view and the edit forms of the respective macro components
+    :param request: http request
+    :param id: id of the component
+    :return: http response
+    """
     model_str = request.path.split('/')[1]
     model = MODELS[model_str]
     form_class = FORMS[model_str]
@@ -95,8 +127,8 @@ def edit(request, id):
         'fields': model.FIELDS.values(),
     }
 
+    # Form Submit:
     if request.method == "POST":
-
         if form.is_valid():
             form.save()
             messages.success(request, 'Changes successfully saved!')
@@ -105,6 +137,7 @@ def edit(request, id):
             messages.error(request, "Error - Input data invalid")
             context['form'] = form
 
+    # Display Form
     t = loader.get_template("plgis/edit.html")
     return HttpResponse(t.render(context, request))
 
@@ -112,6 +145,12 @@ def edit(request, id):
 @login_required
 @user_passes_test(lambda u: u.groups.filter(name='managers').exists())
 def delete(request, id):
+    """
+    This view deletes a macro component.
+    :param request: http request
+    :param id: id of the component
+    :return: http response
+    """
     model_str = request.path.split('/')[1]
     model = MODELS[model_str]
     model.objects.get(pk=id).delete()
@@ -122,6 +161,11 @@ def delete(request, id):
 @login_required
 @user_passes_test(lambda u: u.groups.filter(name='managers').exists())
 def new(request):
+    """
+    This view creates a new macro. Type is decided by the url.
+    :param request: http request
+    :return: http response"""
+
     model_str = request.path.split('/')[1]
     model = MODELS[model_str]
     form_class = FORMS[model_str]
@@ -160,12 +204,21 @@ def new(request):
         return HttpResponse(t.render(context, request))
 
 
+#######################################################################################################################
+
 @login_required
 @user_passes_test(lambda u: u.groups.filter(name='managers').exists())
 def constructor(request):
+    """
+    This view creates a circuit and towers in one single form, instead of creating
+    every tower individually.
+    :param request: http request
+    :return: http/json response
+    """
     if request.POST:
         if request.is_ajax():
-            task = request.POST.get('task', None)
+            # AJAX calls made for input validation and such.
+            task = request.POST.get('task', None)  # get value or None (= no Key Error)
             if task == "validate_circuit":
                 data = json.loads(request.POST.get('data'))
                 form = CircuitForm(data)
@@ -179,6 +232,7 @@ def constructor(request):
                         "errors": form.errors
                     })
         else:
+            # Submit data from forms
             data = json.loads(request.POST['data'])
             circuit = Circuit(identifier=data['identifier'],
                               voltage=data['voltage'],
@@ -186,7 +240,6 @@ def constructor(request):
                               substation_end=data['substation_end']
                               )
             circuit.save()
-            print(data)
             for _, t in data['towers'].items():
                 tower = Tower(identifier=t['identifier'],
                               circuit=circuit,
@@ -199,8 +252,8 @@ def constructor(request):
                               traverses=t['traverses'],
                               )
                 tower.save()
-            print(data)
 
+    # disaply form
     context = {
         'circuit_form': CircuitForm()
     }
@@ -210,6 +263,12 @@ def constructor(request):
 
 @login_required
 def user_profile(request, id):
+    """
+    This view display an user profile
+    :param request: http request
+    :param id: user id
+    :return: http response
+    """
     context = {
         'usr': User.objects.get(pk=id)
     }
@@ -219,9 +278,21 @@ def user_profile(request, id):
 
 @login_required
 def img_upload(request):
+    """
+    This view uploads set of images. The image files get immediately uploaded
+    via AJAX and stored in a temporary location. This view tries to
+    read coordinates of the photographs stroed in exif. If valid coordinates
+    are available, they get returend to the page and are placed into the
+    coordinates textarea. If the user is satisfied, no action is required. In
+    case the user has another external set of coordinates for each picture,
+    e.g. (PPK) he can provide those coordinates. After submission the files
+    will be moved to their designated path determined by the coordinates.
+    :param request: http request
+    :return: http/json/xhr response
+    """
     if request.method == 'POST':
         if request.is_ajax():
-            if request.POST['command'] == 'pics_upload':
+            if request.POST['command'] == 'pics_upload': # file upload
                 msgs = ajax_store_images(request)
                 return JsonResponse(msgs)
         else:
@@ -229,20 +300,32 @@ def img_upload(request):
             store_images(request)
             return redirect('inspection', circuit_id=request.POST['circuit'])
     else:
+        # render form
         t = loader.get_template("plgis/img_upload.html")
         context = {
             'circuits': Circuit.get_user_related_objects(request.user)
         }
         return HttpResponse(t.render(context, request))
 
-
+########################################################################################################################
 @login_required
 def image(request, circuit_id=None, section_id=None, image_id=None):
+    """
+    This view handles listing and displaying of images. If the view does not
+    receive specific image id, it shows a filtered set of image, based on
+    the other view parameters (circuit and section)
+    :param request:
+    :param circuit_id:
+    :param section_id:
+    :param image_id:
+    :return:
+    """
     if circuit_id:
         circuit = Circuit.objects.get(pk=circuit_id)
         if section_id:
             images = Image.objects.filter(circuit=circuit).filter(properties__section=section_id)
             if image_id:
+                # display specific image
                 img = Image.objects.get(pk=image_id)
                 marks = Marking.objects.filter(image=img)
                 faults = [m.fault for m in marks]
@@ -256,14 +339,15 @@ def image(request, circuit_id=None, section_id=None, image_id=None):
                 }
                 return HttpResponse(t.render(context, request))
             else:
+                # list images in the section
                 t = loader.get_template('plgis/list_images.html')
                 context = {
                     'images': images
                 }
                 return HttpResponse(t.render(context, request))
 
-            return HttpResponse(t.render(context, request))
         else:
+            # list images in the circuit
             towers = circuit.get_towers()
             span_fields = [f'SF-{towers[i].number}_{towers[i + 1].number}' for i in range(len(towers) - 1)]
             t = loader.get_template("plgis/select_section.html")
@@ -276,6 +360,7 @@ def image(request, circuit_id=None, section_id=None, image_id=None):
             }
             return HttpResponse(t.render(context, request))
     else:
+        # select cricuit
         t = loader.get_template('plgis/select_circuit.html')
         circuits = Circuit.get_user_related_objects(request.user)
         images = Image.objects.filter(circuit__in=circuits)
@@ -289,8 +374,22 @@ def image(request, circuit_id=None, section_id=None, image_id=None):
 
 @login_required
 def inspection(request, circuit_id=None, section_id=None, image_id=None):
+    """
+    This view takes care of the inspection. In this view user can annotate the
+    uploaded pictures by creating rectangular markings. After the marking, user
+    can either associate the marking with an already existing fault, or
+    register a new one. In order to make it easier for the user to select
+    already created fault, the view provides a geographically nearest faults
+    as well as faults that got recently edited. If specific image_id is not
+    provided, let's the user select from a containing entity (circuit, section)
+    :param request:
+    :param circuit_id:
+    :param section_id:
+    :param image_id:
+    :return:
+    """
     if request.method == 'POST':
-        # Here come the submitted markings
+        # Handle the submitted markings
         marks = json.loads(request.POST['markings'])
         img = Image.objects.get(pk=image_id)
         img.inspected = True
@@ -326,11 +425,13 @@ def inspection(request, circuit_id=None, section_id=None, image_id=None):
         if section_id:
             images = Image.get_section_imagery(circuit_id, section_id)
             if image_id:
+                # inspect specific image
                 image = Image.objects.get(pk=image_id)
                 idx = [i.id for i in images].index(image_id)
                 next_image = images[idx + 1 if not idx == len(images) - 1 else 0]
                 prev_image = images[idx - 1 if not idx == 0 else len(images) - 1]
             else:
+                # inspect the first image of the section
                 return redirect('inspection', circuit_id=circuit_id, section_id=section_id, image_id=images[0].id)
 
             if 'SF-' in section_id:
@@ -370,6 +471,7 @@ def inspection(request, circuit_id=None, section_id=None, image_id=None):
             t = loader.get_template("plgis/inspection.html")
             return HttpResponse(t.render(context, request))
         else:
+            # select section
             towers = circuit.get_towers()
             span_fields = [f'SF-{towers[i].number}_{towers[i + 1].number}' for i in range(len(towers) - 1)]
             t = loader.get_template("plgis/select_section.html")
@@ -382,6 +484,7 @@ def inspection(request, circuit_id=None, section_id=None, image_id=None):
             return HttpResponse(t.render(context, request))
 
     else:
+        # select circuit
         t = loader.get_template('plgis/select_circuit.html')
         context = {
             'circuits': Circuit.get_user_related_objects(request.user),
@@ -389,14 +492,13 @@ def inspection(request, circuit_id=None, section_id=None, image_id=None):
         }
         return HttpResponse(t.render(context, request))
 
-
-@login_required
-def marking(request, mark_id):
-    pass
-
-
 @login_required
 def fault(request, circuit_id=None, section_id=None, fault_id=None):
+    """
+    This view handles listing and displaying of faults. If the view does not
+    receive specific image id, it shows a filtered set of image, based on
+    the other view parameters (circuit and section)
+    """
     if circuit_id:
         circuit = Circuit.get_user_related_objects(request.user).get(pk=circuit_id)
         if section_id:
@@ -404,6 +506,8 @@ def fault(request, circuit_id=None, section_id=None, fault_id=None):
             if fault_id:
                 if request.method == 'POST':
                     if request.is_ajax():
+                        # TODO: MAke it work properly
+                        # load address values into the edit form
                         data = request.POST
                         response = {}
                         if 'circuit' in data:
@@ -443,7 +547,12 @@ def fault(request, circuit_id=None, section_id=None, fault_id=None):
                                                    Circuit.get_user_related_objects(request.user)]
 
                         return JsonResponse(response)
+                    else:
+                        # Handle edit-form submit
+                        pass
+
                 else:
+                    # Display fault page
                     if 'SF-' in section_id:
                         # If section is Span Field, the string has form SF-{t1.id padded}_{t2.id padded}
                         t1, t2 = section_id.split('-')[1].split('_')
@@ -473,12 +582,14 @@ def fault(request, circuit_id=None, section_id=None, fault_id=None):
                     t = loader.get_template('plgis/fault.html')
                     return HttpResponse(t.render(context, request))
             else:
+                # Select from section
                 t = loader.get_template('plgis/list_faults.html')
                 context = {
                     'faults': Fault.objects.filter(address__circuit=str(circuit_id)).filter(address__section=section_id)
                 }
                 return HttpResponse(t.render(context, request))
         else:
+            # Select from circuit
             towers = circuit.get_towers()
             span_fields = [f'SF-{towers[i].number}_{towers[i + 1].number}' for i in range(len(towers) - 1)]
             t = loader.get_template("plgis/select_section.html")
@@ -491,6 +602,7 @@ def fault(request, circuit_id=None, section_id=None, fault_id=None):
             }
             return HttpResponse(t.render(context, request))
     else:
+        # Select circuit
         t = loader.get_template('plgis/select_circuit.html')
         circuits = [str(c.id) for c in Circuit.get_user_related_objects(request.user)]
         context = {
@@ -504,17 +616,27 @@ def fault(request, circuit_id=None, section_id=None, fault_id=None):
 @login_required
 @user_passes_test(lambda u: u.groups.filter(name='managers').exists())
 def export(request):
+    """
+    This view handles the export. The user can select circuit, sections-only,
+    geometry format, epsg code, and what data (geometry, attributes, images).
+    The selected data get copied into one zip archive and the archive is
+    served as an request attachment to be downloaded.
+    :param request:
+    :return:
+    """
     if request.method == 'POST':
         if request.is_ajax():
+            # Based on a selected circuit provide available sections
             data = json.loads(request.body)
             cid = data['circuit']
             circuit = Circuit.objects.get(pk=cid)
             response = {
-                'towers': [{'id':t.id, 'name':t.identifier} for t in circuit.get_towers()],
+                'towers': [{'id': t.id, 'name': t.identifier} for t in circuit.get_towers()],
                 'spanfields': circuit.get_span_fields(return_towers=False),
             }
             return JsonResponse(response)
         else:
+            # Prepare the data for export and serve them
             fpath = file_export(request)
             with open(fpath, 'rb') as f:
                 response = HttpResponse(f, content_type='application/force-download')
@@ -522,6 +644,7 @@ def export(request):
                 return response
 
     else:
+        # Display the form
         t = loader.get_template('plgis/export.html')
         context = {
             'circuits': Circuit.get_user_related_objects(request.user)
@@ -532,4 +655,5 @@ def export(request):
 @login_required
 @user_passes_test(lambda u: u.groups.filter(name='managers').exists())
 def stats(request):
+    # TODO: Implement
     pass

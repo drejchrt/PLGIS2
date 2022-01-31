@@ -22,17 +22,26 @@ FORMATS = {
 
 
 def export(request):
-    data = request.POST
-    t_ids = [t.split('-')[1] for t in data.keys() if 'towers' in t]
+    """
+    This function processes the export request. It converts the data to geopandas
+    dataframe which should be easilly exported to diffrenet geo data formats.
+    """
+    data = request.POST # Shortcut
+    # Checked Towers
+    t_ids = [t.split('-')[1] for t in data.keys() if 'towers' in t] #
     towers = Tower.objects.filter(id__in=t_ids)
+    # Checked Span Fields
     sfs = [sf for sf in data.keys() if 'SF-' in sf]
-    t_srid = int(data['srid'])
+
+    t_srid = int(data['srid']) # Target CRS
+    # GDAL Driver & file extenstions
     ext = FORMATS[data['geo_format']]['extension']
     driver = FORMATS[data['geo_format']]['driver']
 
-    ts = int(datetime.datetime.now().timestamp())
-    edir = os.path.join(settings.MEDIA_ROOT, 'export', 'temp_' + str(ts))
+    ts = int(datetime.datetime.now().timestamp()) # Timestamp for differentiating between different export instances
+    edir = os.path.join(settings.MEDIA_ROOT, 'export', 'temp_' + str(ts))  # Export directory
 
+    # Store Faults to GeoDataFrame and subsequently to a file
     if 'elem_faults' in data:
         t_faults = Marking.objects.filter(fault__address__section__in=[t.identifier for t in towers])
         sf_faults = Marking.objects.filter(fault__address__section__in=sfs)
@@ -74,6 +83,7 @@ def export(request):
 
         gdf_to_file(gdf, ext, driver, edir, 'marks')
 
+    # Copy relevant images to export directory
     if 'elem_images' in data:
         imgs_t = Image.objects.filter(properties__section__in=[t.identifier for t in towers])
         imgs_sf = Image.objects.filter(properties__section__in=sfs)
@@ -81,6 +91,7 @@ def export(request):
         for img in list(imgs_t) + list(imgs_sf):
             img.copy_file(os.path.join(edir, 'images', img.properties['section'], img.get_fname()))
 
+    # Store camera positions to GeoDataFrame and subsequently to a file
     if 'elem_img_pos' in data:
         imgs_t = Image.objects.filter(properties__section__in=[t.identifier for t in towers])
         imgs_sf = Image.objects.filter(properties__section__in=sfs)
@@ -124,6 +135,7 @@ def export(request):
 
         gdf_to_file(gdf, ext, driver, edir, 'cam_pos')
 
+    # Store circuit to GeoDataFrame and subsequently to a file
     if 'elem_circuit' in data:
         df = {
             'id': [],
@@ -160,13 +172,20 @@ def export(request):
 
         gdf_to_file(gdf, ext, driver, edir, 'circuit')
 
-
+    # ZIP the files into an archive and store it in the temporary export directory
     ofile = os.path.join(settings.MEDIA_ROOT, 'export', f'export_plgis_{ts}')
     shutil.make_archive(ofile, 'zip', edir)
-    return ofile + '.zip'
+    return ofile + '.zip' # return the path to the archive to the view, so it can serve it
 
 
 def gdf_to_file(gdf, ext, driver, edir, fname):
+    """
+    DRY. Create a file from GeoDataFrame. Handle file type specific code
+    """
+    # Too bad, that GPKG does not work. When trying to write into a file that
+    # doesn't exist yet, fiona can't open it and when I touch the the file
+    # before writing into it, fiona can't recognise the sqlite structure.
+    # TODO: Gotta look into fiona.open()
     if ext == 'gpkg':
         fpath = os.path.join(edir, f'{fname}.{ext}')
         # touch(fpath)
