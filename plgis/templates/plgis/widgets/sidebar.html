@@ -21,27 +21,20 @@
             <span>Dashboard</span></a>
     </li>
 
-    <!-- Divider -->
-    <hr class="sidebar-divider">
-
-    <!-- Heading -->
-    <div class="sidebar-heading">
-        Components
-    </div>
-
-    <li class="nav-item">
-        <a class="nav-link" href="{% url 'circuits' %}">
-            <i class="fa fa-circle-notch"></i>
-            <span>Circuits</span></a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link" href="{% url 'towers' %}">
-            <i class="fa fa-broadcast-tower"></i>
-            <span>Towers</span></a>
-    </li>
-    <!-- Divider -->
-    <hr class="sidebar-divider">
-    {% if user|has_group:"manager" %}
+    {% if request.user|has_group:'managers' %}
+        <div class="sidebar-heading">
+            Macro Components
+        </div>
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'circuits' %}">
+                <i class="fa fa-circle-notch"></i>
+                <span>Circuits</span></a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'towers' %}">
+                <i class="fa fa-broadcast-tower"></i>
+                <span>Towers</span></a>
+        </li>
         <li class="nav-item">
             <a class="nav-link" href="{% url 'constructor' %}">
                 <i class="fa fa-magic"></i>
@@ -49,56 +42,86 @@
         </li>
         <!-- Divider -->
         <hr class="sidebar-divider">
-
-    {% endif %}
-
-    {% if user|has_group:"inspectors" %}
         <div class="sidebar-heading">
             Inspection
         </div>
-
-        <li class="nav-item">
-            <a class="nav-link" href="{% url 'img_upload' %}">
-                <i class="fa fa-upload"></i>
-                <span>Upload images</span>
-            </a>
-        </li>
         <li class="nav-item">
             <a class="nav-link" href="{% url 'image' %}">
                 <i class="fa fa-images"></i>
                 <span>Browse images</span>
             </a>
         </li>
-         <li class="nav-item">
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'fault' %}">
+                <i class="fa fa-highlighter"></i>
+                <span>Browse Faults</span>
+            </a>
+        </li>
+        <hr class="sidebar-divider">
+        <div class="sidebar-heading">
+        Data
+        </div>
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'export' %}">
+                <i class="fa fa-file-export"></i>
+                <span>Export</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'stats' %}">
+                <i class="fa fa-chart-bar"></i>
+                <span>Stats</span>
+            </a>
+        </li>
+
+
+    {% elif request.user|has_group:'inspectors' %}
+        <div class="sidebar-heading">
+            Macro Components
+        </div>
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'circuits' %}">
+                <i class="fa fa-circle-notch"></i>
+                <span>Circuits</span></a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'towers' %}">
+                <i class="fa fa-broadcast-tower"></i>
+                <span>Towers</span></a>
+        </li>
+        <!-- Divider -->
+        <div class="sidebar-heading">
+            Inspection
+        </div>
+        <li class="nav-item">
+        <a class="nav-link" href="{% url 'img_upload' %}">
+            <i class="fa fa-upload"></i>
+            <span>Upload images</span>
+        </a>
+    </li>
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'image' %}">
+                <i class="fa fa-images"></i>
+                <span>Browse images</span>
+            </a>
+        </li>
+        <li class="nav-item">
             <a class="nav-link" href="{% url 'fault' %}">
                 <i class="fa fa-highlighter"></i>
                 <span>Browse Faults</span>
             </a>
         </li>
         <li class="nav-item">
-            <a class="nav-link" href="{% url 'inspection' %}">
-                <i class="fa fa-search"></i>
-                <span>Inspect</span>
-            </a>
-        </li>
-
+        <a class="nav-link" href="{% url 'inspection' %}">
+            <i class="fa fa-search"></i>
+            <span>Inspect</span>
+        </a>
+    </li>
         <hr class="sidebar-divider">
-        <li class="nav-item">
-            <a class="nav-link" href="{% url 'inspection' %}">
-                <i class="fa fa-file-export"></i>
-                <span>Export</span>
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" href="{% url 'inspection' %}">
-                <i class="fa fa-chart-bar"></i>
-                <span>Stats</span>
-            </a>
-        </li>
+    {% elif request.user|has_group:'workers' %}
     {% endif %}
-
-    <!-- Nav Item - Pages Collapse Menu -->
-
+    <!-- Divider -->
+    <hr class="sidebar-divider">
 
     <!-- Sidebar Toggler (Sidebar) -->
     <div class="text-center d-none d-md-inline">

@@ -1,0 +1,168 @@
+{% extends 'plgis/base.html' %}
+
+{% block title %} PLGIS | Export {% endblock %}
+
+{% block additional_styles %}
+    <meta name="csrf-token" content="{{ csrf_token }}">
+{% endblock %}
+
+{% block content %}
+    <form id="export-form" action="{% url 'export' %}" method="post">
+        {% csrf_token %}
+        <div class="row mb-3">
+            <div class="col-3"></div>
+            <div class="col-9">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Export Data</h3>
+                    </div>
+                    <div class="card-body">
+                        <div id="form-circuit" class="row">
+                            <h5 class="card-title">Select Circuit:</h5>
+                            <div class="col-12">
+                                <div class="form-check">
+                                    <input class="form-check-input" name="circuit" type="radio" value="{{ c.id }}"
+                                           id="circuits-{{ c.id }}">
+                                </div>
+                                {% for c in circuits %}
+                                    <div class="form-check">
+                                        <input class="form-check-input" name="circuit" type="radio" value="{{ c.id }}"
+                                               id="circuits-{{ c.id }}">
+                                        <label class="form-check-label" for="circuits-{{ c.id }}">
+                                            {{ c.identifier }} - ({{ c.get_towers|length }}
+                                            Towers, {{ c.get_faults|length }} Faults)
+                                        </label>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="dropdown-divider"></div>
+                        <div class="row">
+                            <div class="col-12">
+                                <h5 class="card-title">Select Sections:</h5>
+                            </div>
+                        </div>
+                        <div id="form-sections" class="row">
+                            <div class="col-6">
+                                <div id="towers" class="form-check">
+
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div id="spanfields" class="form-check">
+
+                                </div>
+                            </div>
+                        </div>
+                        <div class="dropdown-divider"></div>
+                        <div class="row">
+                            <div class="col-12">
+                                <h5 class="card-title">Select Parts:</h5>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="checkbox" id="elem-faults" name="elem_faults"
+                                           value="true">
+                                    <label class="form-check-label mr-3" for="elem-faults">Faults</label>
+
+                                    <input class="form-check-input" type="checkbox" id="elem-images" name="elem_images"
+                                           value="true">
+                                    <label class="form-check-label mr-3" for="elem-images">Images</label>
+
+                                    <input class="form-check-input" type="checkbox" id="elem-img-pos"
+                                           name="elem_img_pos"
+                                           value="true">
+                                    <label class="form-check-label mr-3" for="elem-img-pos">Camera Positions</label>
+
+                                    <input class="form-check-input" type="checkbox" id="elem-circuit"
+                                           name="elem_circuit"
+                                           value="true">
+                                    <label class="form-check-label mr-3" for="elem-circuit">Circuit Geometry</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="dropdown-divider"></div>
+                        <div class="row">
+                            <div class="col-12">
+                                <h5 class="card-title">Select Formats:</h5>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-12 form-group">
+                                <h6>Geometry:</h6>
+                                <label for="formats-epsg">EPSG:</label>
+                                <input class="form-control" id="formats-epsg" name="srid" type="number">
+                                <label for="formats-geo-format"></label>
+                                <select name="geo_format" class="form-control" id="formats-geo-format">
+                                    <option value="gpkg" disabled>Geopackage (.gpkg)</option>
+                                    <option value="shp">Shapefile (.shp)</option>
+                                    <option value="geojson">GeoJSON</option>
+                                    <option value="dxf">Drawing Exchange Format (.dxf)</option>
+                                    <option value="gml">Geography Markup Language(.gml)</option>
+                                    <option value="csv">Comma Separated Values (.csv)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer text-center">
+                        <button class="btn btn-primary" type="submit">
+                            <i class="fa fa-file-download"></i> Export
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="col-3"></div>
+
+        </div>
+    </form>
+{% endblock %}
+
+{% block additional_scripts %}
+    <script>
+        $(document).ready(function () {
+            var $form = $('form#export-form');
+
+            var $towers = $form.find('div#towers');
+            var $spanfields = $form.find('div#spanfields');
+
+            $form.find('div#form-circuit :input').on('input', function () {
+                $.ajax({
+                    url: '{% url 'export' %}',
+                    type: "POST",
+                    headers: {
+                        "X-CSRFToken": $('meta[name="csrf-token"]').attr('content')
+                    },
+                    dataType: 'json',
+                    data: JSON.stringify({
+                        'circuit': $('input[name="circuit"]:checked').val(),
+                    }),
+                    processData: false,
+                    contentType: false,
+                    success: function (data) {
+                        // clear
+                        $towers.text('')
+                        $spanfields.text('')
+
+                        // append new elemets
+                        for (var t of data.towers) {
+                            $(`<input class="form-check-input" name="towers-${t.id}" type="checkbox" value="true" id="${t.id}" checked>`)
+                                .appendTo($towers)
+                            $(`<label class="form-check-label" for="${t.id}">${t.name}</label><br>`)
+                                .appendTo($towers)
+                        }
+                        for (var sf of data.spanfields) {
+                            $(`<input class="form-check-input" name="${sf}" type="checkbox" value="true" id="${sf}" checked>`)
+                                .appendTo($spanfields)
+                            $(`<label class="form-check-label" for="${sf}">${sf}</label><br>`)
+                                .appendTo($spanfields);
+                        }
+                    }
+                });
+            });
+        });
+
+    </script>
+
+{% endblock %}

@@ -12,7 +12,7 @@ from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from django.urls import reverse
 
-from plgis.misc.tools import fkin_move_file, get_date_taken_from_exif
+from plgis.misc.tools import fkin_move_file, fkin_copy_file, get_date_taken_from_exif
 
 import PIL
 
@@ -164,6 +164,10 @@ class Tower(models.Model):
 
         return bundles
 
+    def get_cables(self):
+        return [b['cables'] for b in self.get_bundles()]
+
+
 
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
@@ -251,7 +255,11 @@ class Image(models.Model):
     def move(self, dest):
         fkin_move_file(self.path, dest)
         self.path = dest
-        # self.save() ## TODO: Probably not the best idea... Gotta think about it
+
+    def copy_file(self, dest):
+        fkin_copy_file(self.path, dest)
+        self.path = dest
+
 
     def get_faults(self):
         '''

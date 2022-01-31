@@ -1,4 +1,6 @@
 import json
+import mimetypes
+import os
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -7,6 +9,7 @@ from django.http import HttpResponse, JsonResponse, HttpResponseRedirect
 from django.shortcuts import render, redirect, loader
 
 from plgis.spatial.img import ajax_store_images, store_images
+from plgis.spatial.export import export as file_export
 
 from .models import *
 from .forms import *
@@ -245,7 +248,7 @@ def image(request, circuit_id=None, section_id=None, image_id=None):
                 faults = [m.fault for m in marks]
                 t = loader.get_template("plgis/image.html")
                 context = {
-                    'circuit':circuit,
+                    'circuit': circuit,
                     'image': img,
                     'marks': marks,
                     'faults': faults
@@ -496,3 +499,37 @@ def fault(request, circuit_id=None, section_id=None, fault_id=None):
             'faults': Fault.objects.filter(address__circuit__in=circuits)
         }
         return HttpResponse(t.render(context, request))
+
+
+@login_required
+@user_passes_test(lambda u: u.groups.filter(name='managers').exists())
+def export(request):
+    if request.method == 'POST':
+        if request.is_ajax():
+            data = json.loads(request.body)
+            cid = data['circuit']
+            circuit = Circuit.objects.get(pk=cid)
+            response = {
+                'towers': [{'id':t.id, 'name':t.identifier} for t in circuit.get_towers()],
+                'spanfields': circuit.get_span_fields(return_towers=False),
+            }
+            return JsonResponse(response)
+        else:
+            fpath = file_export(request)
+            with open(fpath, 'rb') as f:
+                response = HttpResponse(f, content_type='application/force-download')
+                response['Content-Disposition'] = f'attachment; filename="{os.path.basename(fpath)}"'
+                return response
+
+    else:
+        t = loader.get_template('plgis/export.html')
+        context = {
+            'circuits': Circuit.get_user_related_objects(request.user)
+        }
+        return HttpResponse(t.render(context, request))
+
+
+@login_required
+@user_passes_test(lambda u: u.groups.filter(name='managers').exists())
+def stats(request):
+    pass

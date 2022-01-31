@@ -42,4 +42,9 @@ urlpatterns = [
     path('fault/<int:circuit_id>/<str:section_id>/<int:fault_id>', views.fault, name='fault'),
     path('fault/<int:circuit_id>/<str:section_id>/<int:fault_id>/delete', views.fault, name='fault_delete'),
     path('fault/<int:circuit_id>/<str:section_id>/<int:fault_id>/edit', views.fault, name='fault_edit'),
+
+    path('export/', views.export, name='export'),
+
+    path('stats/', views.stats, name='stats'),
+
 ]
