@@ -22,7 +22,7 @@
 {% block content %}
     <h1> {{ model_name|capfirst }}</h1>
     <div class="text-right">
-        {% if user|has_group:"manager" %}
+        {% if user|has_group:"managers" %}
         <div class="btn btn-group">
             <a href="{% url model_name|slice:"-1"|concat:"_new" %}" class="btn btn-primary">
                 <i class="fa fa-plus"></i> Add new {{ model_name|slice:"-1"|capfirst }}

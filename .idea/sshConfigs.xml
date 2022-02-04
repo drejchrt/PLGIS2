@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="SshConfigs">
+    <configs>
+      <sshConfig host="s30.wservices.ch" id="5e64433c-2b2a-488f-b2f6-ff9e5ddae8b0" keyPath="$USER_HOME$/.ssh/id_rsa" port="22" nameFormat="DESCRIPTIVE" username="bierli" />
+    </configs>
+  </component>
+</project>

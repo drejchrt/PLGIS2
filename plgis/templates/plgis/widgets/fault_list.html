@@ -35,7 +35,7 @@
                         <td>{{ f.type }}</td>
                         <td>{{ f.severity }}</td>
                         <td><a href="{% url 'user' id=request.user.id %}">{{ f.author }}</a></td>
-                        <td>{{ f.date_inspected }}</td>
+                        <td>{{ f.date_added }}</td>
                         <td>{{ f.comment }}</td>
                         <td>
                             {% for i in f.get_images %}

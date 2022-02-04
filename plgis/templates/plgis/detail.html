@@ -23,7 +23,7 @@
 
 {% block modals %}
     <!-- delete object modal -->
-    {% if user|has_group:"manager" %}
+    {% if user|has_group:"managers" %}
     <div class="modal fade" tabindex="-1" role="dialog" id="deleteModal">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
@@ -80,7 +80,7 @@
                     {% endif %}
                 </div>
                 <div class="card-footer text-center">
-                    {% if user|has_group:"manager" %}
+                    {% if user|has_group:"managers" %}
                     <a href="{% url model_name|slice:":-1"|concat:"_edit" object.pk %}" class="btn btn-primary">
                         <i class="fas fa-pen"></i> Edit {{ model_name|slice:":-1" }}
                     </a>

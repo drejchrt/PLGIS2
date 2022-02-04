@@ -135,7 +135,7 @@
                                             {% if image not in f.get_images %}
                                                 <li>
                                                     <input name="mark_select" type="radio"
-                                                           value="{{ f.fault.id }}">
+                                                           value="{{ f.id }}">
                                                     <a href="{% url 'fault' circuit_id=circuit.id section_id=section fault_id=f.id %}"
                                                        target="_blank">{{ f }}</a>
                                                 </li>

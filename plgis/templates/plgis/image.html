@@ -114,8 +114,10 @@
                                 <li class="list-group-item">Dimensions: {{ image.get_dimensions }} px</li>
                                 <li class="list-group-item">Date Taken: {{ image.get_date_taken }}</li>
                                 <li class="list-group-item">Insepcted: {{ image.inspected }}</li>
-                                <li class="list-group-item">Insepcted by: <a
-                                        href="{% url 'user' id=image.inspector.id %}">{{ image.inspector }}</a></li>
+                                {% if image.inspected %}
+                                    <li class="list-group-item">Insepcted by: <a
+                                            href="{% url 'user' id=image.inspector.id %}">{{ image.inspector }}</a></li>
+                                {% endif %}
                                 <li class="list-group-item">Uploaded by: <a
                                         href="{% url 'user' id=image.author.id %}">{{ image.author }}</a></li>
                                 <li class="list-group-item">Size {{ image.get_size|temp_round:3 }} MB</li>

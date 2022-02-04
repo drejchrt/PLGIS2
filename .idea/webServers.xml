@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="d42b7535-f675-480f-af18-8bf966962ad9" name="djangoeurope" url="http://bierli.django.group">
+        <fileTransfer rootFolder="/home/bierli/plgis/plgis" accessType="SFTP" host="s30.wservices.ch" port="22" sshConfigId="5e64433c-2b2a-488f-b2f6-ff9e5ddae8b0" sshConfig="bierli@s30.wservices.ch:22 key" keyPair="true">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" keepAliveTimeout="0" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>
